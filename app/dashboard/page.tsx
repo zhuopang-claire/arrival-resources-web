@@ -5,7 +5,8 @@ import MapGL, { Layer, Popup, Source, type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X } from "lucide-react";
+import { X, Menu, ChevronDown, ChevronUp } from "lucide-react";
+import { useIsMobile } from "@/lib/useIsMobile";
 import {
   Dialog,
   DialogContent,
@@ -159,6 +160,7 @@ function describeWedge(cx: number, cy: number, r: number, startAngle: number, en
 }
 
 export default function DashboardPage() {
+  const isMobile = useIsMobile();
   const [places, setPlaces] = useState<Place[]>([]);
   const [tagGuide, setTagGuide] = useState<TagGuide[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,6 +171,8 @@ export default function DashboardPage() {
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showMunicipalities, setShowMunicipalities] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(!isMobile);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const raw = window.localStorage.getItem("arrival_sidebar_width");
@@ -327,6 +331,11 @@ export default function DashboardPage() {
       window.localStorage.setItem("arrival_sidebar_width", String(sidebarWidth));
     }
   }, [sidebarWidth]);
+
+  // Update legend state when mobile state changes
+  useEffect(() => {
+    setLegendOpen(!isMobile);
+  }, [isMobile]);
 
   useEffect(() => {
     function onMove(e: PointerEvent) {
@@ -647,9 +656,23 @@ export default function DashboardPage() {
     }}>
       <main style={{ display: "grid", gap: 16, width: "100%" }}>
       <header style={{ display: "grid", gap: 8 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>Resources for Arrival</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, margin: 0 }}>Resources for Arrival</h1>
+          {isMobile && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="rounded-full"
+              aria-label="Toggle sidebar"
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <p style={{ opacity: 0.8, margin: 0 }}>
+          <p style={{ opacity: 0.8, margin: 0, fontSize: isMobile ? 13 : 14 }}>
           {loading
   ? "Loading…"
   : viewMode === "map"
@@ -690,21 +713,36 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <section style={{ display: "grid", gridTemplateColumns: `${sidebarWidth}px 10px 1fr`, gap: 16 }}>
+      <section style={{ 
+        display: "grid", 
+        gridTemplateColumns: isMobile 
+          ? "1fr" 
+          : `${sidebarWidth}px 10px 1fr`, 
+        gap: isMobile ? 12 : 16,
+        gridTemplateRows: isMobile ? "auto 1fr" : "1fr"
+      }}>
         {/* LEFT: filters + tags + counts + list */}
         <aside
-        
         style={{
             border: "1px solid var(--border)",
             borderRadius: 12,
             padding: 12,
-            display: "grid",
+            display: isMobile ? (sidebarOpen ? "grid" : "none") : "grid",
             gap: 14,
             alignContent: "start",
-            height: "calc(100vh - 210px)",
-            overflow: "hidden",
+            height: isMobile 
+              ? sidebarOpen 
+                ? "auto" 
+                : 0 
+              : "calc(100vh - 210px)",
+            maxHeight: isMobile ? "60vh" : "calc(100vh - 210px)",
+            overflow: isMobile ? "auto" : "hidden",
             background: "var(--surface-2)",
             boxShadow: "var(--shadow-sm)",
+            gridColumn: isMobile ? "1 / -1" : "1",
+            gridRow: isMobile ? "1" : "1",
+            transition: isMobile ? "max-height 0.3s ease, opacity 0.3s ease" : "none",
+            opacity: isMobile && !sidebarOpen ? 0 : 1,
           }}
         >
           {/* Search */}
@@ -983,38 +1021,40 @@ export default function DashboardPage() {
 
         </aside>
 
-        {/* Resizer */}
-        <div
-          onPointerDown={(e) => {
-            e.preventDefault();
-            try {
-              (e.currentTarget as any).setPointerCapture?.(e.pointerId);
-            } catch {}
-            resizeState.current.dragging = true;
-            resizeState.current.startX = e.clientX;
-            resizeState.current.startWidth = sidebarWidth;
-          }}
-          style={{
-            height: "calc(100vh - 210px)",
-            borderRadius: 999,
-            cursor: "col-resize",
-            display: "grid",
-            placeItems: "center",
-            userSelect: "none",
-            touchAction: "none",
-          }}
-          title="Drag to resize sidebar"
-          aria-label="Resize sidebar"
-        >
+        {/* Resizer - hidden on mobile */}
+        {!isMobile && (
           <div
-            style={{
-              width: 4,
-              height: "100%",
-              borderRadius: 999,
-              background: "#e5e7eb",
+            onPointerDown={(e) => {
+              e.preventDefault();
+              try {
+                (e.currentTarget as any).setPointerCapture?.(e.pointerId);
+              } catch {}
+              resizeState.current.dragging = true;
+              resizeState.current.startX = e.clientX;
+              resizeState.current.startWidth = sidebarWidth;
             }}
-          />
-        </div>
+            style={{
+              height: "calc(100vh - 210px)",
+              borderRadius: 999,
+              cursor: "col-resize",
+              display: "grid",
+              placeItems: "center",
+              userSelect: "none",
+              touchAction: "none",
+            }}
+            title="Drag to resize sidebar"
+            aria-label="Resize sidebar"
+          >
+            <div
+              style={{
+                width: 4,
+                height: "100%",
+                borderRadius: 999,
+                background: "#e5e7eb",
+              }}
+            />
+          </div>
+        )}
 
         {/* RIGHT: map */}
         <div
@@ -1022,10 +1062,16 @@ export default function DashboardPage() {
             border: "1px solid var(--border)",
             borderRadius: 12,
             overflow: "hidden",
-            height: "calc(100vh - 210px)",
+            height: isMobile 
+              ? "calc(100dvh - 280px)" 
+              : "calc(100vh - 210px)",
+            minHeight: isMobile ? 400 : undefined,
             position: "relative",
             background: "var(--surface)",
             boxShadow: "var(--shadow-sm)",
+            gridColumn: isMobile ? "1 / -1" : "3",
+            gridRow: isMobile ? "2" : "1",
+            width: "100%",
           }}
         >
           {viewMode === "map" ? (
@@ -1084,7 +1130,7 @@ export default function DashboardPage() {
                   } catch {}
                 }}
                 mapStyle="mapbox://styles/mapbox/light-v11"
-                style={{ width: "100%", height: "100%" }}
+                style={{ width: "100%", height: "100%", touchAction: "pan-x pan-y pinch-zoom" }}
                 interactiveLayerIds={["clusters", "unclustered-point"]}
                 onClick={(e) => {
                   const f = e.features?.[0];
@@ -1118,62 +1164,129 @@ export default function DashboardPage() {
                   }
                 }}
               >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 12,
-                    right: 12,
-                    zIndex: 2,
-                    background: "rgba(255,255,255,0.92)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    padding: 10,
-                    width: 220,
-                  }}
-                >
-                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>Legend</div>
-                  <div style={{ display: "grid", gap: 6, fontSize: 12 }}>
-                    {[
-                      { label: "Public Library", color: categoryColor("library") },
-                      { label: "Food Access", color: categoryColor("food_access") },
-                      { label: "Government Office", color: categoryColor("government") },
-                      { label: "Education Center", color: categoryColor("education") },
-                      { label: "Community Organization", color: categoryColor("community") },
-                    ].map((it) => (
-                      <div key={it.label} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span
-                          style={{
-                            width: 10,
-                            height: 10,
-                            borderRadius: 999,
-                            background: it.color,
-                            border: "1px solid rgba(0,0,0,0.08)",
-                          }}
-                        />
-                        <span style={{ opacity: 0.9 }}>{it.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "10px 0" }} />
-                  <label
+                {/* On mobile, only show container when expanded; on desktop, always show container */}
+                {(isMobile ? legendOpen : true) && (
+                  <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      fontSize: 12,
-                      cursor: "pointer",
-                      userSelect: "none",
+                      position: "absolute",
+                      top: isMobile ? 8 : 12,
+                      right: isMobile ? 8 : 12,
+                      left: isMobile ? 8 : undefined,
+                      bottom: isMobile ? 8 : undefined,
+                      zIndex: 2,
+                      background: "rgba(255,255,255,0.92)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      padding: isMobile ? 8 : 10,
+                      width: isMobile ? "calc(100% - 16px)" : 220,
+                      maxWidth: isMobile ? 280 : 220,
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      checked={showMunicipalities}
-                      onChange={(e) => setShowMunicipalities(e.target.checked)}
-                      style={{ width: 14, height: 14 }}
-                    />
-                    <span style={{ opacity: 0.9 }}>Municipal Boundaries</span>
-                  </label>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setLegendOpen(!legendOpen)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        width: "100%",
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        margin: 0,
+                        cursor: "pointer",
+                        fontWeight: 800,
+                        fontSize: isMobile ? 12 : 13,
+                        marginBottom: legendOpen ? (isMobile ? 6 : 8) : 0,
+                        color: "inherit",
+                      }}
+                      aria-label={legendOpen ? "Collapse legend" : "Expand legend"}
+                      aria-expanded={legendOpen}
+                    >
+                      <span>Legend</span>
+                      {legendOpen ? (
+                        <ChevronUp className="h-4 w-4" style={{ opacity: 0.7 }} />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" style={{ opacity: 0.7 }} />
+                      )}
+                    </button>
+                    {legendOpen && (
+                      <>
+                        <div style={{ display: "grid", gap: isMobile ? 4 : 6, fontSize: isMobile ? 11 : 12 }}>
+                          {[
+                            { label: "Public Library", color: categoryColor("library") },
+                            { label: "Food Access", color: categoryColor("food_access") },
+                            { label: "Government Office", color: categoryColor("government") },
+                            { label: "Education Center", color: categoryColor("education") },
+                            { label: "Community Organization", color: categoryColor("community") },
+                          ].map((it) => (
+                            <div key={it.label} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                              <span
+                                style={{
+                                  width: 10,
+                                  height: 10,
+                                  borderRadius: 999,
+                                  background: it.color,
+                                  border: "1px solid rgba(0,0,0,0.08)",
+                                }}
+                              />
+                              <span style={{ opacity: 0.9 }}>{it.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ height: 1, background: "rgba(0,0,0,0.06)", margin: "10px 0" }} />
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            fontSize: 12,
+                            cursor: "pointer",
+                            userSelect: "none",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={showMunicipalities}
+                            onChange={(e) => setShowMunicipalities(e.target.checked)}
+                            style={{ width: 14, height: 14 }}
+                          />
+                          <span style={{ opacity: 0.9 }}>Municipal Boundaries</span>
+                        </label>
+                      </>
+                    )}
+                  </div>
+                )}
+                {/* On mobile, show a small toggle button when collapsed */}
+                {isMobile && !legendOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setLegendOpen(true)}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      zIndex: 2,
+                      background: "rgba(255,255,255,0.92)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: 12,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      color: "inherit",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    }}
+                    aria-label="Expand legend"
+                    aria-expanded={false}
+                  >
+                    <span>Legend</span>
+                    <ChevronDown className="h-4 w-4" style={{ opacity: 0.7 }} />
+                  </button>
+                )}
                 {showMunicipalities ? (
                     <Source id="municipalities" type="geojson" data="/gb_municipalities.geojson">
                         <Layer {...muniFillLayer} />
@@ -1204,7 +1317,7 @@ export default function DashboardPage() {
                     onClose={() => setActivePlaceId(null)}
                     closeButton
                     closeOnClick={false}
-                    maxWidth="340px"
+                    maxWidth={isMobile ? "calc(100vw - 32px)" : "340px"}
                     className="arrival-popup"
                   >
                     <div style={{ display: "grid", gap: 8 }}>
@@ -1432,12 +1545,16 @@ export default function DashboardPage() {
           background: var(--surface);
           color: var(--text);
           box-shadow: var(--shadow-md);
+          touch-action: manipulation;
         }
 
         .arrival-popup .mapboxgl-popup-content a {
           color: var(--primary);
           text-decoration: underline;
           text-underline-offset: 3px;
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
         }
 
         .arrival-popup .mapboxgl-popup-content a:hover {
@@ -1447,8 +1564,10 @@ export default function DashboardPage() {
         .arrival-popup .mapboxgl-popup-close-button {
           top: 14px;
           right: 14px;
-          width: 36px;
-          height: 36px;
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          min-height: 44px;
           font-size: 22px;
           line-height: 1;
           padding: 0 0 2px 0; /* nudge the × up a touch */
@@ -1461,6 +1580,8 @@ export default function DashboardPage() {
           display: flex;
           align-items: center;
           justify-content: center;
+          touch-action: manipulation;
+          cursor: pointer;
         }
 
         .arrival-popup .mapboxgl-popup-close-button:hover {
@@ -1468,9 +1589,25 @@ export default function DashboardPage() {
           opacity: 1;
         }
 
+        .arrival-popup .mapboxgl-popup-close-button:active {
+          background: var(--primary-soft-16);
+          transform: scale(0.95);
+        }
+
         .arrival-popup .mapboxgl-popup-close-button:focus-visible {
           outline: 2px solid var(--ring);
           outline-offset: 2px;
+        }
+
+        @media (max-width: 768px) {
+          .arrival-popup .mapboxgl-popup-close-button {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            min-height: 48px;
+            top: 8px;
+            right: 8px;
+          }
         }
       `}</style>
       </main>
