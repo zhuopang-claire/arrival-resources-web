@@ -1,0 +1,260 @@
+[
+  {
+    "tag": "food_access",
+    "display_name": "Food Access",
+    "description": "Food pantries; Free meals; Food distributions",
+    "example_keywords": "food pantry, free meals, food distribution, groceries, meal program, food bank, food assistance"
+  },
+  {
+    "tag": "housing_support",
+    "display_name": "Housing Support",
+    "description": "Help finding, keeping, or stabilizing housing (applications, landlord issues, tenant rights info, housing navigation)",
+    "example_keywords": "housing support, housing search, rental assistance, tenant support, eviction prevention, housing navigation"
+  },
+  {
+    "tag": "shelter",
+    "display_name": "Shelter",
+    "description": "Emergency or temporary shelter resources",
+    "example_keywords": "shelter"
+  },
+  {
+    "tag": "financial_literacy",
+    "display_name": "Financial Literacy",
+    "description": "Education and guidance on managing money, including budgeting, banking, saving, credit, and financial planning",
+    "example_keywords": "financial literacy, budgeting, banking, money management, credit, saving, financial education"
+  },
+  {
+    "tag": "benefits_navigation",
+    "display_name": "Benefit Navigation",
+    "description": "Help applying for, renewing, or understanding public benefits and assistance programs",
+    "example_keywords": "benefits help, SNAP, food stamps, MassHealth/Medicaid, TANF, SSI, application assistance, navigation"
+  },
+  {
+    "tag": "transportation",
+    "display_name": "Transportation Support",
+    "description": "Help to provide transportation",
+    "example_keywords": "transportation"
+  },
+  {
+    "tag": "immigration_legal",
+    "display_name": "Immigration Legal Services",
+    "description": "Legal assistance related to immigration status and processes: asylum, visas, green cards, deportation",
+    "example_keywords": "immigration legal, asylum, visa, green card, legal aid"
+  },
+  {
+    "tag": "citizenship",
+    "display_name": "Citizenship Support",
+    "description": "Citizenship classes; Naturalization application help; Civics test preparation; Citizenship corners (libraries)",
+    "example_keywords": "citizenship, naturalization, civics test, citizenship class"
+  },
+  {
+    "tag": "case_management",
+    "display_name": "Case Management",
+    "description": "Ongoing individual support / navigation",
+    "example_keywords": "case management, caseworker"
+  },
+  {
+    "tag": "government_office",
+    "display_name": "Government Office",
+    "description": "A government-run office or official municipal/state/federal service on immigrant affairs",
+    "example_keywords": "city office, municipal office, government services, immigrant affairs office, public agency, city hall, town office"
+  },
+  {
+    "tag": "id_documents",
+    "display_name": "ID and Documents",
+    "description": "Help with IDs, licenses, documents",
+    "example_keywords": "ID help, identification documents, birth certificate, social security, SSN, state ID, document assistance"
+  },
+  {
+    "tag": "translation",
+    "display_name": "Translation & Interpretation",
+    "description": "Document translation; Interpretation; Multilingual assistance",
+    "example_keywords": "translation, interpretation"
+  },
+  {
+    "tag": "esol",
+    "display_name": "English Education",
+    "description": "ESOL / ESL / ELL classes; English conversation circles; English tutoring or language exchange; Citizenship-related or job-related English classes",
+    "example_keywords": "ESOL, ESL, ELL, English classes, conversation circle, English tutoring, English"
+  },
+  {
+    "tag": "adult_education",
+    "display_name": "Adult Education",
+    "description": "GED/HiSET; Adult literacy; Continuing education",
+    "example_keywords": "adult education, GED, HiSET, basic education, adult learning"
+  },
+  {
+    "tag": "digital_skills",
+    "display_name": "Digital Skills & Tech Help",
+    "description": "Computer / phone / internet skills classes or drop-in tech help",
+    "example_keywords": "tech help, computer class, digital literacy, technology assistance, tech class"
+  },
+  {
+    "tag": "school_support",
+    "display_name": "School Support",
+    "description": "Support related to K–12 schooling, including enrollment help, tutoring, school navigation, parent support.",
+    "example_keywords": "school support, enrollment, tutoring, homework help, parent liaison, school navigation, student support"
+  },
+  {
+    "tag": "job_training",
+    "display_name": "Job Training",
+    "description": "Vocational training; Certification programs; Skill-based courses",
+    "example_keywords": "job training program, certification, workforce training"
+  },
+  {
+    "tag": "career_services",
+    "display_name": "Career & Job Search Services",
+    "description": "Resume writing; Interview preparation; Job search assistance; Networking support",
+    "example_keywords": "resume, job search, career coaching, interview"
+  },
+  {
+    "tag": "entrepreneur_support",
+    "display_name": "Entrepreneur Support",
+    "description": "Help starting small businesses",
+    "example_keywords": "entrepreneurship, start a business, small business support, business coaching, business training, licensing help"
+  },
+  {
+    "tag": "health_clinic",
+    "display_name": "Health Clinic",
+    "description": "Primary care; Community health centers",
+    "example_keywords": "clinic, health center, primary care, medical care, doctor appointment, community health, patient services"
+  },
+  {
+    "tag": "mental_health",
+    "display_name": "Mental Health",
+    "description": "Counseling; Therapy; Trauma support; Emotional Wellbeing",
+    "example_keywords": "mental health, counseling, therapy, support group, depression, anxiety, trauma, behavioral health"
+  },
+  {
+    "tag": "public_health_programs",
+    "display_name": "Public Health",
+    "description": "Health education, prevention, and screenings; Vaccination outreach",
+    "example_keywords": "ublic health, vaccination, immunization, screening, health education, prevention programs, wellness outreach"
+  },
+  {
+    "tag": "youth_programs",
+    "display_name": "Youth Programs",
+    "description": "Youth leadership; Youth programs; Youth education and employment support",
+    "example_keywords": "youth, teens"
+  },
+  {
+    "tag": "childcare",
+    "display_name": "Childcare",
+    "description": "Childcare; Childwatch",
+    "example_keywords": "childcare, child care, daycare, preschool care, child minding, babysitting support, care for children"
+  },
+  {
+    "tag": "after_school_program",
+    "display_name": "After-School Programs",
+    "description": "Homework help; Enrichment programs for children",
+    "example_keywords": "after school, homework help, children’s program"
+  },
+  {
+    "tag": "family_program",
+    "display_name": "Family Programs",
+    "description": "Parenting classes; Family literacy; Family activities",
+    "example_keywords": "family program, parenting, family support"
+  },
+  {
+    "tag": "elderly_support",
+    "display_name": "Elderly Support",
+    "description": "Senior programs; Elder services",
+    "example_keywords": "elderly, senior, older adults"
+  },
+  {
+    "tag": "mutual_aid",
+    "display_name": "Mutual Aid",
+    "description": "Community-led support networks where people exchange help/resources",
+    "example_keywords": "mutual aid, volunteer support, neighbor-to-neighbor"
+  },
+  {
+    "tag": "arts_culture",
+    "display_name": "Arts and Culture",
+    "description": "Arts and crafts; Cultural programs; Festivals; Performances",
+    "example_keywords": "arts, culture, cultural events, music, dance, art classes, workshops, exhibitions, performances"
+  },
+  {
+    "tag": "sports_recreation",
+    "display_name": "Sports and Recreation",
+    "description": "Physical activity, fitness, sports leagues, or recreation programs",
+    "example_keywords": "fitness, gym, sports, recreation, swimming, exercise classes, youth sports, wellness classes"
+  },
+  {
+    "tag": "immigrant_advocacy",
+    "display_name": "Immigrant Advocacy",
+    "description": "Immigrants and workers rights advocacy; Policy engagement",
+    "example_keywords": "advocacy, immigrant rights, workers rights"
+  },
+  {
+    "tag": "civic_engagement",
+    "display_name": "Civic Engagement",
+    "description": "Voter education; Community organizing; Civic workshops",
+    "example_keywords": "civic engagement, community participation, voter"
+  },
+  {
+    "tag": "library_services",
+    "display_name": "Library Services",
+    "description": "Core library services such as borrowing books, reference help, collections, and general public programs.",
+    "example_keywords": "borrow books, library card, circulation, reference desk, collections, library programs, catalog help"
+  },
+  {
+    "tag": "internet_access",
+    "display_name": "Internet Access",
+    "description": "Free wifi",
+    "example_keywords": "free Wi-Fi, wireless internet, internet access, hotspots"
+  },
+  {
+    "tag": "public_computers",
+    "display_name": "Public Computers",
+    "description": "Public PCs / devices (some can be borrowed to use at home)",
+    "example_keywords": "public computers, computer lab, computer access, laptops"
+  },
+  {
+    "tag": "printing_scanning",
+    "display_name": "Printing and Scanning",
+    "description": "Printing or scanning services (often with a charge)",
+    "example_keywords": "printing, scanning, photocopy, copy machine, fax"
+  },
+  {
+    "tag": "notary_services",
+    "display_name": "Notary Services",
+    "description": "Notary public services for witnessing/signing official documents (often free of charge)",
+    "example_keywords": "notary, notary public"
+  },
+  {
+    "tag": "passport_services",
+    "display_name": "Passport Acceptance Services (Library)",
+    "description": "Accepting U.S. passport applications",
+    "example_keywords": "passport services"
+  },
+  {
+    "tag": "seed_library",
+    "display_name": "Seed Library",
+    "description": "Lending or exchange programs that provide seeds (often seasonal) and gardening resources",
+    "example_keywords": "seed library, seeds to borrow, seed lending"
+  },
+  {
+    "tag": "makerspace",
+    "display_name": "Makerspace",
+    "description": "3D printing; Laser cutters; Creative labs",
+    "example_keywords": "makerspace, 3D printing, fabrication lab"
+  },
+  {
+    "tag": "library_of_things",
+    "display_name": "Library of Things",
+    "description": "Tool lending; Device lending; Toy lending",
+    "example_keywords": "library of things"
+  },
+  {
+    "tag": "study_room_reservation",
+    "display_name": "Study Room",
+    "description": "Reserve a quiet study room",
+    "example_keywords": "study room reservation"
+  },
+  {
+    "tag": "meeting_room_reservation",
+    "display_name": "Meeting Room",
+    "description": "Reserve a meeting room",
+    "example_keywords": "meeting room reservation"
+  }
+]

@@ -158,7 +158,7 @@ function describeWedge(cx: number, cy: number, r: number, startAngle: number, en
   ].join(" ");
 }
 
-export default function Home() {
+export default function DashboardPage() {
   const [places, setPlaces] = useState<Place[]>([]);
   const [tagGuide, setTagGuide] = useState<TagGuide[]>([]);
   const [loading, setLoading] = useState(true);
