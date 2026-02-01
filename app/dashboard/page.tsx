@@ -5,7 +5,7 @@ import MapGL, { Layer, Popup, Source, type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Menu, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Menu, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { useIsMobile } from "@/lib/useIsMobile";
 import {
   Dialog,
@@ -41,6 +41,8 @@ type TagGuide = {
   example_keywords?: string;
 };
 
+const PLACEHOLDER_IMAGE = "/placeholder-image.jpg";
+
 function getPhotoSrc(photoRef: string | null, placeId: string | null): string | null {
   const pid = (placeId || "").toString().trim();
   const ref = (photoRef || "").toString().trim();
@@ -61,7 +63,7 @@ function getPhotoSrc(photoRef: string | null, placeId: string | null): string | 
   // Fallback: legacy photo_reference only (may expire)
   if (ref) return `/api/photo?ref=${encodeURIComponent(ref)}&w=300`;
 
-  return null;
+  return PLACEHOLDER_IMAGE;
 }
 
 function safeUrl(raw: string | null): string | null {
@@ -173,6 +175,10 @@ export default function DashboardPage() {
   const [showMunicipalities, setShowMunicipalities] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [legendOpen, setLegendOpen] = useState(!isMobile);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
     if (typeof window !== "undefined") {
       const raw = window.localStorage.getItem("arrival_sidebar_width");
@@ -415,6 +421,23 @@ export default function DashboardPage() {
     });
   }, [filteredUnique, mapBounds, viewMode]);
 
+  // Pagination logic for list view
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredUnique.length / itemsPerPage);
+  }, [filteredUnique.length]);
+
+  const paginatedResults = useMemo(() => {
+    return filteredUnique.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+    );
+  }, [filteredUnique, currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, selectedTags, viewMode]);
+
   const allTags = useMemo(() => {
     const set = new Set<string>();
     for (const p of placesInView) for (const t of p.service_tags || []) set.add(t);
@@ -644,6 +667,156 @@ export default function DashboardPage() {
     if (!h) return null;
     // Keep it compact; the API often returns long strings.
     return h.replace(/\s*\|\s*/g, " • ");
+  }
+
+  async function exportToPDF(exportAll: boolean) {
+    setIsExporting(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+
+      const dataToExport = exportAll ? filteredUnique : paginatedResults;
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - 2 * margin;
+      const footerText =
+        "This map compiles publicly available information from online sources and third-party platforms. It is exploratory and non-exhaustive; details may be incomplete or outdated. Please verify information directly with service providers.";
+      const footerFontSizeBase = 10;
+      const footerLineHeight = 4;
+      const footerLines = doc.splitTextToSize(footerText, contentWidth);
+      const footerHeight = footerLines.length * footerLineHeight + 2;
+      let yPosition = margin;
+
+      // Helper function to add a new page if needed
+      const checkNewPage = (requiredHeight: number) => {
+        if (yPosition + requiredHeight > pageHeight - margin - footerHeight) {
+          doc.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Add header
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text("Arrival Resources - List View", margin, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const dateStr = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      doc.text(`Generated: ${dateStr}`, margin, yPosition);
+      yPosition += 6;
+
+      doc.text(`Export: ${exportAll ? "All Results" : "Current Page"} (${dataToExport.length} ${dataToExport.length === 1 ? "result" : "results"})`, margin, yPosition);
+      yPosition += 6;
+
+      // Add filter info if any
+      if (query || selectedTags.length > 0) {
+        const filterText = [
+          query ? `Search: "${query}"` : null,
+          selectedTags.length > 0 ? `Tags: ${selectedTags.map(t => tagLabel.get(t) ?? t).join(", ")}` : null,
+        ].filter(Boolean).join(" | ");
+        doc.text(`Filters: ${filterText}`, margin, yPosition);
+        yPosition += 6;
+      }
+
+      yPosition += 4;
+      doc.line(margin, yPosition, pageWidth - margin, yPosition);
+      yPosition += 8;
+
+      // Add places
+      doc.setFontSize(11);
+      for (let i = 0; i < dataToExport.length; i++) {
+        const p = dataToExport[i];
+        const pid = placeKey(p);
+        const hours = formatHours(p.opening_hours);
+
+        // Check if we need a new page
+        const estimatedHeight = 50; // Rough estimate
+        checkNewPage(estimatedHeight);
+
+        // Place name
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        const name = p.office || p.organization || "(No name)";
+        const nameLines = doc.splitTextToSize(name, contentWidth);
+        doc.text(nameLines, margin, yPosition);
+        yPosition += nameLines.length * 6;
+
+        // Organization
+        if (p.organization && p.organization !== name) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(10);
+          doc.text(p.organization, margin, yPosition);
+          yPosition += 5;
+        }
+
+        // Address
+        if (p.address) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          doc.text(p.address, margin, yPosition);
+          yPosition += 5;
+        }
+
+        // Contact info
+        const contactInfo: string[] = [];
+        if (p.phone) contactInfo.push(`Phone: ${p.phone}`);
+        if (p.email) contactInfo.push(`Email: ${p.email}`);
+        if (safeUrl(p.website)) contactInfo.push(`Website: ${safeUrl(p.website)}`);
+
+        if (contactInfo.length > 0) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          const contactLines = doc.splitTextToSize(contactInfo.join(" | "), contentWidth);
+          doc.text(contactLines, margin, yPosition);
+          yPosition += contactLines.length * 5;
+        }
+
+        // Service tags
+        if (p.service_tags && p.service_tags.length > 0) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          const tagsText = p.service_tags.map(t => tagLabel.get(t) ?? t).join(", ");
+          const tagLines = doc.splitTextToSize(`Tags: ${tagsText}`, contentWidth);
+          doc.text(tagLines, margin, yPosition);
+          yPosition += tagLines.length * 5;
+        }
+
+        yPosition += 2;
+        if (i < dataToExport.length - 1) {
+          doc.line(margin, yPosition, pageWidth - margin, yPosition);
+          yPosition += 5;
+        }
+      }
+
+      const totalPages = Math.max(1, doc.internal.pages.length - 1);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(footerFontSizeBase);
+      const footerLinesWrapped = doc.splitTextToSize(footerText, contentWidth);
+      for (let page = 1; page <= totalPages; page += 1) {
+        doc.setPage(page);
+        const footerY = pageHeight - margin - (footerLinesWrapped.length - 1) * footerLineHeight;
+        doc.text(footerLinesWrapped, margin, footerY);
+      }
+
+      // Save PDF
+      const filename = `arrival-resources-list-${new Date().toISOString().split("T")[0]}.pdf`;
+      doc.save(filename);
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      alert("Failed to export PDF. Please try again.");
+    } finally {
+      setIsExporting(false);
+      setShowExportDialog(false);
+    }
   }
 
   return (
@@ -1326,6 +1499,10 @@ export default function DashboardPage() {
                         <img
                           src={getPhotoSrc(activePlace.photo_ref, activePlace.place_id) as string}
                           alt="Place photo"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = PLACEHOLDER_IMAGE;
+                          }}
                           style={{
                             width: "100%",
                             height: 140,
@@ -1425,9 +1602,63 @@ export default function DashboardPage() {
             )
           ) : (
             <div style={{ height: "100%", overflow: "auto", padding: 12 }}>
-              <div style={{ fontWeight: 800, marginBottom: 10 }}>Results</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontWeight: 800 }}>Results</div>
+                {filteredUnique.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowExportDialog(true)}
+                    disabled={isExporting}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? "Exporting..." : "Download PDF"}
+                  </Button>
+                )}
+              </div>
+              <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Export to PDF</DialogTitle>
+                    <DialogDescription>
+                      Choose what to export:
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => exportToPDF(false)}
+                      disabled={isExporting}
+                      style={{ justifyContent: "flex-start", textAlign: "left", padding: "24px 30px" }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                        <div style={{ fontWeight: 600 }}>Export Current Page</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>
+                          Export {paginatedResults.length} result{paginatedResults.length !== 1 ? "s" : ""} from page {currentPage}
+                        </div>
+                      </div>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => exportToPDF(true)}
+                      disabled={isExporting}
+                      style={{ justifyContent: "flex-start", textAlign: "left", padding: "24px 30px" }}
+                    >
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+                        <div style={{ fontWeight: 600 }}>Export All Results</div>
+                        <div style={{ fontSize: 12, opacity: 0.7 }}>
+                          Export all {filteredUnique.length} filtered result{filteredUnique.length !== 1 ? "s" : ""}
+                        </div>
+                      </div>
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <div style={{ display: "grid", gap: 12 }}>
-                {filteredUnique.map((p) => {
+                {paginatedResults.map((p) => {
                   const pid = placeKey(p);
                   const isActive = !!activePlaceId && pid === activePlaceId;
                   const photo = getPhotoSrc(p.photo_ref, p.place_id);
@@ -1449,6 +1680,10 @@ export default function DashboardPage() {
                           <img
                             src={photo}
                             alt="Place photo"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = PLACEHOLDER_IMAGE;
+                            }}
                             style={{ width: 120, height: 120, borderRadius: 12, objectFit: "cover", border: "1px solid #eee" }}
                           />
                         ) : null}
@@ -1532,6 +1767,68 @@ export default function DashboardPage() {
                   );
                 })}
               </div>
+              {filteredUnique.length > 0 && (
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center", 
+                  marginTop: 16,
+                  paddingTop: 16,
+                  borderTop: "1px solid #eee",
+                  flexWrap: "wrap",
+                  gap: 12
+                }}>
+                  <div style={{ fontSize: 14, opacity: 0.8 }}>
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredUnique.length)} of {filteredUnique.length} results
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14 }}>
+                      <span>Page</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={Math.max(1, totalPages)}
+                        value={currentPage}
+                        onChange={(event) => {
+                          const next = Number(event.target.value);
+                          if (!Number.isFinite(next)) return;
+                          const clamped = Math.min(Math.max(1, next), Math.max(1, totalPages));
+                          setCurrentPage(clamped);
+                        }}
+                        style={{
+                          width: 64,
+                          padding: "4px 6px",
+                          borderRadius: 8,
+                          border: "1px solid #ddd",
+                          textAlign: "center",
+                          fontSize: 14,
+                        }}
+                      />
+                      <span>of {totalPages || 1}</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage >= totalPages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
