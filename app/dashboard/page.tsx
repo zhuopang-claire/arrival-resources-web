@@ -91,6 +91,18 @@ function categoryColor(category: string): string {
 
   if (c.includes("government") || c.includes("city") || c.includes("state")) return "#99c24d";
   if (c.includes("education") || c.includes("adult")) return "#E11D48";
+
+  // Religious / faith-based resources
+  if (
+    c.includes("religious") ||
+    c.includes("faith") ||
+    c.includes("church") ||
+    c.includes("mosque") ||
+    c.includes("temple") ||
+    c.includes("synagogue")
+  )
+    return "#7C3AED"; // purple
+
   if (c.includes("community") || c.includes("nonprofit") || c.includes("organization")) return "#0F766E";
 
   return "#111827"; // neutral
@@ -112,6 +124,17 @@ function categoryIcon(category: string): string {
 
   if (c.includes("government") || c.includes("city") || c.includes("state")) return "🏛️";
   if (c.includes("education") || c.includes("adult")) return "🎓";
+
+  if (
+    c.includes("religious") ||
+    c.includes("faith") ||
+    c.includes("church") ||
+    c.includes("mosque") ||
+    c.includes("temple") ||
+    c.includes("synagogue")
+  )
+    return "⛪";
+
   if (c.includes("community") || c.includes("nonprofit") || c.includes("organization")) return "🤝";
 
   return "📍";
@@ -198,6 +221,7 @@ export default function DashboardPage() {
   const [nearQuery, setNearQuery] = useState("");
   const [nearError, setNearError] = useState<string | null>(null);
   const [nearLoading, setNearLoading] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
   const hasMapboxToken = mapboxToken.trim().length > 0;
 
@@ -1267,6 +1291,7 @@ export default function DashboardPage() {
                   zoom: 9.5,
                 }}
                 onLoad={() => {
+                  setMapError(null);
                   try {
                     const b = mapRef.current?.getBounds();
                     if (!b) return;
@@ -1277,6 +1302,12 @@ export default function DashboardPage() {
                       north: b.getNorth(),
                     });
                   } catch {}
+                }}
+                onError={(evt) => {
+                  const err: any = (evt as any)?.error || evt;
+                  const msg = err?.message || err?.error?.message || String(err || "Unknown Mapbox error");
+                  console.error("Mapbox error:", err);
+                  setMapError(msg);
                 }}
                 onMoveEnd={() => {
                   try {
@@ -1391,6 +1422,7 @@ export default function DashboardPage() {
                             { label: "Food Access", color: categoryColor("food_access") },
                             { label: "Government Office", color: categoryColor("government") },
                             { label: "Education Center", color: categoryColor("education") },
+                            { label: "Religious / Faith-based", color: categoryColor("religious") },
                             { label: "Community Organization", color: categoryColor("community") },
                           ].map((it) => (
                             <div key={it.label} style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1460,12 +1492,38 @@ export default function DashboardPage() {
                     <ChevronDown className="h-4 w-4" style={{ opacity: 0.7 }} />
                   </button>
                 )}
+                {mapError ? (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 12,
+                      bottom: 12,
+                      zIndex: 3,
+                      background: "rgba(255,255,255,0.95)",
+                      border: "1px solid rgba(185, 28, 28, 0.35)",
+                      borderRadius: 12,
+                      padding: "10px 12px",
+                      maxWidth: 520,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      color: "#7f1d1d",
+                      fontSize: 12,
+                      lineHeight: 1.4,
+                    }}
+                    role="alert"
+                  >
+                    <div style={{ fontWeight: 800, marginBottom: 4 }}>Map error</div>
+                    <div style={{ opacity: 0.95 }}>{mapError}</div>
+                    <div style={{ marginTop: 6, opacity: 0.8 }}>
+                      Tip: open DevTools → Network, filter "mapbox", and check for 401/403 on style/tiles.
+                    </div>
+                  </div>
+                ) : null}
                 {showMunicipalities ? (
-                    <Source id="municipalities" type="geojson" data="/gb_municipalities.geojson">
-                        <Layer {...muniFillLayer} />
-                        <Layer {...muniLineLayer} />
-                    </Source>
-                    ) : null}
+                  <Source id="municipalities" type="geojson" data="/gb_municipalities.geojson">
+                    <Layer {...muniFillLayer} />
+                    <Layer {...muniLineLayer} />
+                  </Source>
+                ) : null}
                 <Source
                   id="places"
                   type="geojson"

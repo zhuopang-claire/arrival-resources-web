@@ -91,6 +91,18 @@ function categoryColor(category: string): string {
 
   if (c.includes("government") || c.includes("city") || c.includes("state")) return "#99c24d";
   if (c.includes("education") || c.includes("adult")) return "#E11D48";
+
+  // Religious / faith-based resources
+  if (
+    c.includes("religious") ||
+    c.includes("faith") ||
+    c.includes("church") ||
+    c.includes("mosque") ||
+    c.includes("temple") ||
+    c.includes("synagogue")
+  )
+    return "#7C3AED"; // purple
+
   if (c.includes("community") || c.includes("nonprofit") || c.includes("organization")) return "#0F766E";
 
   return "#111827"; // neutral
@@ -112,6 +124,17 @@ function categoryIcon(category: string): string {
 
   if (c.includes("government") || c.includes("city") || c.includes("state")) return "🏛️";
   if (c.includes("education") || c.includes("adult")) return "🎓";
+
+  if (
+    c.includes("religious") ||
+    c.includes("faith") ||
+    c.includes("church") ||
+    c.includes("mosque") ||
+    c.includes("temple") ||
+    c.includes("synagogue")
+  )
+    return "⛪";
+
   if (c.includes("community") || c.includes("nonprofit") || c.includes("organization")) return "🤝";
 
   return "📍";
@@ -161,7 +184,7 @@ function describeWedge(cx: number, cy: number, r: number, startAngle: number, en
   ].join(" ");
 }
 
-export default function Home() {
+export default function DashboardPage() {
   const isMobile = useIsMobile();
   const [places, setPlaces] = useState<Place[]>([]);
   const [tagGuide, setTagGuide] = useState<TagGuide[]>([]);
@@ -681,8 +704,8 @@ export default function Home() {
       const margin = 20;
       const contentWidth = pageWidth - 2 * margin;
       const footerText =
-        "Note: This map compiles publicly available information from online sources and third-party platforms. It is exploratory and non-exhaustive; details may be incomplete or outdated. Please verify information directly with service providers.";
-      const footerFontSizeBase = 8;
+        "This map compiles publicly available information from online sources and third-party platforms. It is exploratory and non-exhaustive; details may be incomplete or outdated. Please verify information directly with service providers.";
+      const footerFontSizeBase = 10;
       const footerLineHeight = 4;
       const footerLines = doc.splitTextToSize(footerText, contentWidth);
       const footerHeight = footerLines.length * footerLineHeight + 2;
@@ -1391,6 +1414,7 @@ export default function Home() {
                             { label: "Food Access", color: categoryColor("food_access") },
                             { label: "Government Office", color: categoryColor("government") },
                             { label: "Education Center", color: categoryColor("education") },
+                            { label: "Religious / Faith-based", color: categoryColor("religious") },
                             { label: "Community Organization", color: categoryColor("community") },
                           ].map((it) => (
                             <div key={it.label} style={{ display: "flex", gap: 8, alignItems: "center" }}>

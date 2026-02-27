@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, MapPin, Users, Lightbulb, Globe, Search, Languages, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -8,14 +9,26 @@ export default function AboutPage() {
   const [isExpanded, setIsExpanded] = useState(false);
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-8">
+      {/* Header Image */}
+      <div className="relative w-full overflow-hidden rounded-xl">
+        <div className="relative w-full h-44 sm:h-56 md:h-64">
+          <Image
+            src="/about-picture.png"
+            alt="Arrival Resources header"
+            fill
+            priority
+            className="object-cover"
+          />
+          {/* White wash overlay */}
+          <div className="absolute inset-0 bg-white/55" />
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="space-y-4 text-center pb-8">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           About This Project
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          "Making Space for Arrival" is an ongoing PhD research project exploring the relationship between migrant newcomers and urban space.
-        </p>
       </div>
 
       {/* Main Content Card */}
@@ -77,7 +90,7 @@ export default function AboutPage() {
               This map is non-exhaustive and based primarily on sources that are publicly available, and therefore easier to map at a scale. These are often organizations and civic spaces with an explicit role in supporting newcomers, either by providing resources directly or helping people navigate them (for example: ESOL classes, employment support, citizenship services, and immigration legal help). In many cases, these places also have staff who are trained to work with newly arrived immigrants, and their services are intentionally designed around access, signposting, and support.
             </p>
             <p className="text-foreground leading-relaxed">
-              At the same time, many important arrival spaces are harder to capture through public data alone. Religious institutions, for example, often play a crucial role in welcoming and serving immigrants. Everyday commercial spaces—barbershops, cafés, laundromats—and public spaces like parks can also be central to daily life, informal information-sharing, and community formation. Mapping these spaces typically requires local, contextual knowledge, and is often only feasible at a much finer, neighborhood scale. It also raises questions about privacy, safety, and what should (or should not) be made publicly visible in a public-facing map.
+              At the same time, many important arrival spaces are harder to capture through public data alone. Some religious institutions, for example, often play a crucial role in welcoming and serving immigrants. Some everyday commercial spaces—barbershops, cafés, laundromats—and public spaces like parks can also be central to daily life, informal information-sharing, and community formation. Mapping these spaces typically requires local, contextual knowledge, and is often only feasible at a much finer, neighborhood scale. It also raises questions about privacy, safety, and what should (or should not) be made publicly visible in a public-facing map.
             </p>
           </CardContent>
         )}
