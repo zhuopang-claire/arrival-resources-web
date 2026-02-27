@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Arrival Resources Web App
 
-## Getting Started
+Arrival Resources is a lightweight web map and directory that helps users find welcoming services in Greater Boston.
 
-First, run the development server:
+- Switching between Map View and List View
+- Print PDFs (from List View)
+- Search and filtering by service tags, name, and locations
+
+> This repository contains the **web frontend** (Next.js App Router). 
+
+---
+
+## Tech stack
+
+- Next.js (App Router)
+- React + TypeScript
+- Mapbox GL via `react-map-gl`
+- Tailwind CSS
+
+---
+
+## Getting started
+
+### 1) Install dependencies
+
+```bash
+npm install
+```
+
+### 2) Configure environment variables
+
+Create a file named `.env.local` in this folder (`arrival-resources-web/`) with:
+
+```bash
+NEXT_PUBLIC_MAPBOX_TOKEN=pk.your_mapbox_public_token_here
+```
+
+### 3) Run the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Data
 
-## Learn More
+The app reads a static JSON file from the public folder:
 
-To learn more about Next.js, take a look at the following resources:
+- `public/data/places_public.json`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Common tasks
 
-## Deploy on Vercel
+### Build
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run build
+npm start
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Lint
+
+```bash
+npm run lint
+```
+
+---
+
+## Deployment
+
+This project deploys cleanly to Vercel.
+
+- Set `NEXT_PUBLIC_MAPBOX_TOKEN` in Vercel environment variables.
+- Ensure any Mapbox token URL restrictions include your deployed domain.
+
+---
+
+## Citation
+
+If you use this project in academic work, please cite it. A `CITATION.cff` file is included so GitHub can display the preferred citation.
+
+## License
+
+MIT License (c) 2026 Zhuo Pang.
