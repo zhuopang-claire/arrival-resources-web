@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+title: "Arrival Resources Web App"
+message: "If you use this software, please cite it."
+type: software
+authors:
+  - family-names: Pang
+    given-names: Zhuo
+year: 2026
+license: MIT
+
+repository-code: "https://github.com/zhuopang-claire/arrival-resources-web"
+url: "https://github.com/zhuopang-claire/arrival-resources-web"
+date-released: "2026-02-26"
+version: "1.0.0"
+
