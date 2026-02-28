@@ -1603,7 +1603,7 @@ export default function DashboardPage() {
                             marginTop: 6,
                           }}
                         >
-                          {activePlace.service_tags.slice(0, 10).map((t) => (
+                          {activePlace.service_tags.map((t) => (
                             <span
                               key={t}
                               style={{
