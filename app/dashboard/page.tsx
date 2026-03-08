@@ -1896,7 +1896,10 @@ export default function DashboardPage() {
       <style jsx global>{`
         .arrival-popup .mapboxgl-popup-content {
           border-radius: 14px;
-          overflow: hidden;
+          /* Allow long tag lists to be visible/scrollable instead of being clipped */
+          overflow: visible;
+          max-height: 70vh;
+          overflow-y: auto;
           background: var(--surface);
           color: var(--text);
           box-shadow: var(--shadow-md);
@@ -1962,6 +1965,9 @@ export default function DashboardPage() {
             min-height: 48px;
             top: 8px;
             right: 8px;
+          }
+          .arrival-popup .mapboxgl-popup-content {
+            max-height: 60vh;
           }
         }
       `}</style>
