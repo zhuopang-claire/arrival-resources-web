@@ -916,7 +916,7 @@ export default function DashboardPage() {
           ? "1fr" 
           : `${sidebarWidth}px 10px 1fr`, 
         gap: isMobile ? 12 : 16,
-        gridTemplateRows: isMobile ? "auto 1fr" : "1fr"
+        gridTemplateRows: isMobile ? "auto 1fr auto" : "1fr"
       }}>
         {/* Mobile: when sidebar closed, show Filters chip to open it */}
         {isMobile && !sidebarOpen ? (
@@ -1053,8 +1053,120 @@ export default function DashboardPage() {
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ fontWeight: 700 }}>Service Tags</div>
 
+                {/* Desktop: helper links under title */}
+                {!isMobile && (
+                  <div style={{ display: "grid", gap: 6, alignItems: "flex-start" }}>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-xs underline underline-offset-4 text-primary hover:text-[var(--accent-strong)] cursor-pointer"
+                          style={{ width: "fit-content", textAlign: "left" }}
+                        >
+                          What do these tags mean?
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-3xl overflow-hidden">
+                        <DialogHeader className="pb-3">
+                          <DialogTitle>Service Tags Guide</DialogTitle>
+                          <DialogDescription>This explains what each tag means.</DialogDescription>
+                        </DialogHeader>
+                        <div className="max-h-[72vh] overflow-y-auto pr-1">
+                          <div className="grid gap-3">
+                            {tagGuide.map((t) => (
+                              <div key={t.tag} className="rounded-lg border p-3">
+                                <div className="font-semibold">
+                                  {t.display_name}{" "}
+                                  <span className="font-normal opacity-60 text-xs"></span>
+                                </div>
+                                {t.description ? <div className="mt-2 opacity-90">{t.description}</div> : null}
+                                {t.example_keywords ? (
+                                  <div className="mt-2 text-sm opacity-80">
+                                    <strong>Example keywords:</strong> {t.example_keywords}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-xs underline underline-offset-4 text-primary hover:text-[var(--accent-strong)] cursor-pointer"
+                          style={{ width: "fit-content", textAlign: "left" }}
+                        >
+                          Looking for food?
+                        </button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-lg">
+                        <DialogHeader>
+                          <DialogTitle>Looking for food?</DialogTitle>
+                        </DialogHeader>
+                        <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+                          For food pantries, free meals, food deliveries, please visit the Greater Boston Food Bank to find resources near you:{" "}
+                          <a href="https://www.gbfb.org/need-food/" target="_blank" rel="noreferrer">
+                            https://www.gbfb.org/need-food/
+                          </a>
+                          .
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setSelectedTags([])}
+                title="Clear selected tags"
+              >
+                Clear
+              </Button>
+            </div>
+
+            {/* Mobile: tag buttons first, then helper links */}
+            {isMobile && (
+              <>
+                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>Tap to filter by tag</div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    marginTop: 4,
+                    maxHeight: "none",
+                    overflow: "visible",
+                    paddingRight: 4,
+                  }}
+                >
+                  {allTags.map((t) => {
+                    const active = selectedTags.includes(t);
+                    return (
+                      <Button
+                        key={t}
+                        variant="outline"
+                        size="sm"
+                        aria-pressed={active}
+                        className={`rounded-full h-8 px-3 ${
+                          active
+                            ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
+                            : "hover:bg-secondary"
+                        }`}
+                        onClick={() => toggleTag(t)}
+                        title={tagMeta.get(t)?.description || ""}
+                      >
+                        {tagLabel.get(t) ?? t}
+                      </Button>
+                    );
+                  })}
+                </div>
                 <div style={{ display: "grid", gap: 6, alignItems: "flex-start" }}>
-                  {/* Tag meanings dialog */}
                   <Dialog>
                     <DialogTrigger asChild>
                       <button
@@ -1065,7 +1177,6 @@ export default function DashboardPage() {
                         What do these tags mean?
                       </button>
                     </DialogTrigger>
-
                     <DialogContent className="max-w-3xl overflow-hidden">
                       <DialogHeader className="pb-3">
                         <DialogTitle>Service Tags Guide</DialogTitle>
@@ -1091,8 +1202,6 @@ export default function DashboardPage() {
                       </div>
                     </DialogContent>
                   </Dialog>
-
-                  {/* Food help dialog */}
                   <Dialog>
                     <DialogTrigger asChild>
                       <button
@@ -1103,7 +1212,6 @@ export default function DashboardPage() {
                         Looking for food?
                       </button>
                     </DialogTrigger>
-
                     <DialogContent className="max-w-lg">
                       <DialogHeader>
                         <DialogTitle>Looking for food?</DialogTitle>
@@ -1118,52 +1226,44 @@ export default function DashboardPage() {
                     </DialogContent>
                   </Dialog>
                 </div>
-              </div>
+              </>
+            )}
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="rounded-full"
-                onClick={() => setSelectedTags([])}
-                title="Clear selected tags"
+            {/* Desktop: tag buttons (with scroll) */}
+            {!isMobile && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  marginTop: 8,
+                  maxHeight: 360,
+                  overflow: "auto",
+                  paddingRight: 4,
+                }}
               >
-                Clear
-              </Button>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 8,
-                marginTop: 8,
-                maxHeight: 360,
-                overflow: "auto",
-                paddingRight: 4,
-              }}
-            >
-              {allTags.map((t) => {
-                const active = selectedTags.includes(t);
-                return (
-                  <Button
-                    key={t}
-                    variant="outline"
-                    size="sm"
-                    aria-pressed={active}
-                    className={`rounded-full h-8 px-3 ${
-                      active
-                        ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
-                        : "hover:bg-secondary"
-                    }`}
-                    onClick={() => toggleTag(t)}
-                    title={tagMeta.get(t)?.description || ""}
-                  >
-                    {tagLabel.get(t) ?? t}
-                  </Button>
-                );
-              })}
-            </div>
+                {allTags.map((t) => {
+                  const active = selectedTags.includes(t);
+                  return (
+                    <Button
+                      key={t}
+                      variant="outline"
+                      size="sm"
+                      aria-pressed={active}
+                      className={`rounded-full h-8 px-3 ${
+                        active
+                          ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
+                          : "hover:bg-secondary"
+                      }`}
+                      onClick={() => toggleTag(t)}
+                      title={tagMeta.get(t)?.description || ""}
+                    >
+                      {tagLabel.get(t) ?? t}
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
 
             {selectedTags.length > 0 && (
               <div style={{ fontSize: 12, opacity: 0.8 }}>
@@ -1172,65 +1272,67 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Counts by category */}
-          <div style={{ borderTop: "1px solid #eee", paddingTop: 16, marginTop: 4 }}>
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Counts by Category</div>
+          {/* Counts by category - desktop only; on mobile shown below map */}
+          {!isMobile && (
+            <div style={{ borderTop: "1px solid #eee", paddingTop: 16, marginTop: 4 }}>
+              <div style={{ fontWeight: 700, marginBottom: 8 }}>Counts by Category</div>
 
-            {countsByCategory.length === 0 ? (
-              <div style={{ fontSize: 12, opacity: 0.7 }}>No places in view.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 8 }}>
-                {(() => {
-                  const max = Math.max(...countsByCategory.map(([, n]) => n));
-                  return countsByCategory.map(([cat, n]) => {
-                    const pct = max > 0 ? (n / max) * 100 : 0;
-                    return (
-                      <div key={cat} style={{ display: "grid", gap: 4 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
-                          <span style={{ flex: "1 1 0%", minWidth: 0, wordBreak: "break-word", opacity: 0.85 }}>{cat}</span>
-                          <span style={{ fontWeight: 800, flexShrink: 0 }}>{n}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span
-                            style={{
-                              width: 18,
-                              textAlign: "center",
-                              fontSize: 14,
-                              lineHeight: "14px",
-                              opacity: 0.9,
-                            }}
-                            title={cat}
-                            aria-label={cat}
-                          >
-                            {categoryIcon(cat)}
-                          </span>
+              {countsByCategory.length === 0 ? (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>No places in view.</div>
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {(() => {
+                    const max = Math.max(...countsByCategory.map(([, n]) => n));
+                    return countsByCategory.map(([cat, n]) => {
+                      const pct = max > 0 ? (n / max) * 100 : 0;
+                      return (
+                        <div key={cat} style={{ display: "grid", gap: 4 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+                            <span style={{ flex: "1 1 0%", minWidth: 0, wordBreak: "break-word", opacity: 0.85 }}>{cat}</span>
+                            <span style={{ fontWeight: 800, flexShrink: 0 }}>{n}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span
+                              style={{
+                                width: 18,
+                                textAlign: "center",
+                                fontSize: 14,
+                                lineHeight: "14px",
+                                opacity: 0.9,
+                              }}
+                              title={cat}
+                              aria-label={cat}
+                            >
+                              {categoryIcon(cat)}
+                            </span>
 
-                          <div
-                            style={{
-                              flex: 1,
-                              height: 8,
-                              background: "#f3f4f6",
-                              borderRadius: 999,
-                              overflow: "hidden",
-                              border: "1px solid #eee",
-                            }}
-                          >
                             <div
                               style={{
-                                height: "100%",
-                                width: `${pct}%`,
-                                background: categoryColor(cat),
+                                flex: 1,
+                                height: 8,
+                                background: "#f3f4f6",
+                                borderRadius: 999,
+                                overflow: "hidden",
+                                border: "1px solid #eee",
                               }}
-                            />
+                            >
+                              <div
+                                style={{
+                                  height: "100%",
+                                  width: `${pct}%`,
+                                  background: categoryColor(cat),
+                                }}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-          </div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
 
         </aside>
 
@@ -1906,6 +2008,76 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Mobile: Counts by Category below the map */}
+        {isMobile && (
+          <div
+            style={{
+              gridColumn: "1 / -1",
+              gridRow: 3,
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 12,
+              background: "var(--surface-2)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Counts by Category</div>
+            {countsByCategory.length === 0 ? (
+              <div style={{ fontSize: 12, opacity: 0.7 }}>No places in view.</div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {(() => {
+                  const max = Math.max(...countsByCategory.map(([, n]) => n));
+                  return countsByCategory.map(([cat, n]) => {
+                    const pct = max > 0 ? (n / max) * 100 : 0;
+                    return (
+                      <div key={cat} style={{ display: "grid", gap: 4 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
+                          <span style={{ flex: "1 1 0%", minWidth: 0, wordBreak: "break-word", opacity: 0.85 }}>{cat}</span>
+                          <span style={{ fontWeight: 800, flexShrink: 0 }}>{n}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span
+                            style={{
+                              width: 18,
+                              textAlign: "center",
+                              fontSize: 14,
+                              lineHeight: "14px",
+                              opacity: 0.9,
+                            }}
+                            title={cat}
+                            aria-label={cat}
+                          >
+                            {categoryIcon(cat)}
+                          </span>
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 8,
+                              background: "#f3f4f6",
+                              borderRadius: 999,
+                              overflow: "hidden",
+                              border: "1px solid #eee",
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: "100%",
+                                width: `${pct}%`,
+                                background: categoryColor(cat),
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Map popup close button style */}
