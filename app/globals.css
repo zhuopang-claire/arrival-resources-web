@@ -91,12 +91,16 @@ a:hover {
 }
 
 .app-header {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 
 .app-brand {
   max-width: 1400px;
+  min-width: 0;
   margin: 0 auto;
   padding: 14px 8px;
   display: grid;

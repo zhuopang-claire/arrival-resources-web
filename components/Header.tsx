@@ -17,14 +17,18 @@ export default function Header() {
   return (
     <header className="app-header">
       <div className="app-brand" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px" }}>
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0">
+        <Link
+          href="/"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity min-w-0 flex-1 sm:flex-initial"
+          style={{ minWidth: 0 }}
+        >
           <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
-          <div>
-            <div className="app-title">Arrival Resources</div>
-            <div className="app-subtitle">Find Welcoming Services in Greater Boston</div>
+          <div className="min-w-0 flex-1" style={{ minWidth: 0 }}>
+            <div className="app-title truncate">Arrival Resources</div>
+            <div className="app-subtitle truncate">Find Welcoming Services in Greater Boston</div>
           </div>
         </Link>
-        
+
         <nav className="hidden sm:flex items-center gap-1 flex-shrink-0">
           {navLinks.map((link) => {
             const isActive = pathname === link.href;

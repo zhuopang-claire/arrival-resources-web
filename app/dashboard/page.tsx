@@ -918,6 +918,21 @@ export default function DashboardPage() {
         gap: isMobile ? 12 : 16,
         gridTemplateRows: isMobile ? "auto 1fr" : "1fr"
       }}>
+        {/* Mobile: when sidebar closed, show Filters chip to open it */}
+        {isMobile && !sidebarOpen ? (
+          <div style={{ gridColumn: "1 / -1", gridRow: 1, display: "flex", alignItems: "center" }}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-full"
+              aria-label="Open filters"
+            >
+              Filters
+            </Button>
+          </div>
+        ) : null}
         {/* LEFT: filters + tags + counts + list */}
         <aside
         style={{
@@ -993,7 +1008,7 @@ export default function DashboardPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") geocodeAndFly();
                   }}
-                  placeholder="Search near you (address or ZIP)…"
+                  placeholder={isMobile ? "Address or ZIP" : "Search near you (address or ZIP)…"}
                   style={{ background: "var(--surface)" }}
                 />
                 {nearQuery && (
@@ -1032,6 +1047,7 @@ export default function DashboardPage() {
                 justifyContent: "space-between",
                 gap: 8,
                 alignItems: "flex-start",
+                marginBottom: 4,
               }}
             >
               <div style={{ display: "grid", gap: 4 }}>
@@ -1157,7 +1173,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Counts by category */}
-          <div style={{ borderTop: "1px solid #eee", paddingTop: 10 }}>
+          <div style={{ borderTop: "1px solid #eee", paddingTop: 16, marginTop: 4 }}>
             <div style={{ fontWeight: 700, marginBottom: 8 }}>Counts by Category</div>
 
             {countsByCategory.length === 0 ? (
@@ -1171,8 +1187,8 @@ export default function DashboardPage() {
                     return (
                       <div key={cat} style={{ display: "grid", gap: 4 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
-                          <span style={{ opacity: 0.85 }}>{cat}</span>
-                          <span style={{ fontWeight: 800 }}>{n}</span>
+                          <span style={{ flex: "1 1 0%", minWidth: 0, wordBreak: "break-word", opacity: 0.85 }}>{cat}</span>
+                          <span style={{ fontWeight: 800, flexShrink: 0 }}>{n}</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span
