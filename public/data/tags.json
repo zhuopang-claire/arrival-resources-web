@@ -6,6 +6,12 @@
     "example_keywords": "food pantry, free meals, food distribution, groceries, meal program, food bank, food assistance"
   },
   {
+    "tag": "material_assistance",
+    "display_name": "Material Assistance",
+    "description": "Distribution of clothing, backpacks, gifts, school supplies, or other basic goods beyond food.",
+    "example_keywords": "winter clothing, backpacks, gifts for children, school supplies, material aid, baby supply bags"
+  },
+  {
     "tag": "housing_support",
     "display_name": "Housing Support",
     "description": "Help finding, keeping, or stabilizing housing (applications, landlord issues, tenant rights info, housing navigation)",
@@ -60,6 +66,12 @@
     "example_keywords": "city office, municipal office, government services, immigrant affairs office, public agency, city hall, town office"
   },
   {
+    "tag": "cash_assistance",
+    "display_name": "Cash Assistance / Income Support",
+    "description": "Direct cash or income-support benefits such as TAFDC, EAEDC, SSI, TANF, or general assistance.",
+    "example_keywords": "cash assistance, TAFDC, EAEDC, SSI, TANF, general assistance"
+  },
+  {
     "tag": "id_documents",
     "display_name": "ID and Documents",
     "description": "Help with IDs, licenses, documents",
@@ -105,7 +117,7 @@
     "tag": "career_services",
     "display_name": "Career & Job Search Services",
     "description": "Resume writing; Interview preparation; Job search assistance; Networking support",
-    "example_keywords": "resume, job search, career coaching, interview"
+    "example_keywords": "resume, job search, career coaching, interview, job readiness"
   },
   {
     "tag": "entrepreneur_support",
@@ -138,10 +150,10 @@
     "example_keywords": "youth, teens"
   },
   {
-    "tag": "childcare",
-    "display_name": "Childcare",
-    "description": "Childcare; Childwatch",
-    "example_keywords": "childcare, child care, daycare, preschool care, child minding, babysitting support, care for children"
+    "tag": "childcare_early_childhood",
+    "display_name": "Childcare & Early Childhood",
+    "description": "Childcare, early learning, preschool, and other early childhood support for young children and families",
+    "example_keywords": "childcare, child care, daycare, early childhood, early learning, preschool, pre-k, school readiness, child development, child minding, babysitting support, care for children"
   },
   {
     "tag": "after_school_program",
@@ -190,6 +202,12 @@
     "display_name": "Civic Engagement",
     "description": "Voter education; Community organizing; Civic workshops",
     "example_keywords": "civic engagement, community participation, voter"
+  },
+  {
+    "tag": "utility_assistance",
+    "display_name": "Utility & Energy Assistance",
+    "description": "Help paying for heat, fuel, electricity, or other utility costs; LIHEAP-style energy assistance.",
+    "example_keywords": "heating assistance, fuel assistance, utility bill help, LIHEAP, low-income home energy assistance"
   },
   {
     "tag": "library_services",
