@@ -92,6 +92,12 @@ function categoryColor(category: string): string {
   if (c.includes("government") || c.includes("city") || c.includes("state")) return "#99c24d";
   if (c.includes("education") || c.includes("adult")) return "#E11D48";
 
+  // Health centers / clinics
+  if (c.includes("health")) return "#fb8500"; // orange
+
+  // Community centers should be visually distinct from broader community organizations
+  if (c.includes("community_center")) return "#ffd60a"; // yellow
+
   // Religious / faith-based resources
   if (
     c.includes("religious") ||
@@ -124,6 +130,9 @@ function categoryIcon(category: string): string {
 
   if (c.includes("government") || c.includes("city") || c.includes("state")) return "🏛️";
   if (c.includes("education") || c.includes("adult")) return "🎓";
+
+  if (c.includes("health")) return "🏥";
+  if (c.includes("community_center")) return "🏠";
 
   if (
     c.includes("religious") ||
@@ -1537,11 +1546,12 @@ export default function DashboardPage() {
                         <div style={{ display: "grid", gap: isMobile ? 4 : 6, fontSize: isMobile ? 11 : 12 }}>
                           {[
                             { label: "Public Library", color: categoryColor("library") },
-                            { label: "Food Access", color: categoryColor("food_access") },
                             { label: "Government Office", color: categoryColor("government") },
                             { label: "Education Center", color: categoryColor("education") },
+                            { label: "Health Center", color: categoryColor("health center") },
                             { label: "Religious / Faith-based", color: categoryColor("religious") },
-                            { label: "Community Organization", color: categoryColor("community") },
+                            { label: "Community Center", color: categoryColor("community center") },
+                            { label: "Community Organization", color: categoryColor("community organization") },
                           ].map((it) => (
                             <div key={it.label} style={{ display: "flex", gap: 8, alignItems: "center" }}>
                               <span
