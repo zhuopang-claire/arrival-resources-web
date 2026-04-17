@@ -63,6 +63,11 @@ type TagGroupDef = {
   description: string;
   tags: string[];
 };
+type AdditionalResourceGroup = {
+  id: string;
+  label: string;
+  links: Array<{ label: string; href: string }>;
+};
 
 const PLACEHOLDER_IMAGE = "/placeholder-image.jpg";
 const SERVICE_TAG_GROUPS: TagGroupDef[] = [
@@ -175,6 +180,58 @@ const SERVICE_TAG_GROUPS: TagGroupDef[] = [
     ],
   },
 
+];
+const ADDITIONAL_RESOURCE_GROUPS: AdditionalResourceGroup[] = [
+  {
+    id: "comprehensive",
+    label: "Comprehensive",
+    links: [
+      {
+        label: "MIRA Resources and Factsheets",
+        href: "https://miracoalition.org/news/category/resources/",
+      },
+      {
+        label: "Massachusetts ORI Toolkit",
+        href: "https://www.mass.gov/community-resource-toolkit",
+      },
+      {
+        label: "Boston City Services and Benefits",
+        href: "https://www.boston.gov/departments/immigrant-advancement/city-services-and-benefits",
+      },
+    ],
+  },
+  {
+    id: "legal",
+    label: "Immigration Legal",
+    links: [
+      {
+        label: "MIRA Legal Services",
+        href: "https://www.miracoalition.org/resources/legal-services/",
+      },
+      {
+        label: "National Legal Services Directory",
+        href: "https://www.immigrationadvocates.org/nonprofit/legaldirectory/",
+      },
+      {
+        label: "Massachusetts AG Immigrant Resources",
+        href: "https://www.mass.gov/info-details/resources-for-immigrants-in-massachusetts",
+      },
+      {
+        label: "Boston Free Immigration Consultations",
+        href: "https://www.boston.gov/departments/immigrant-advancement/free-immigration-consultations",
+      },
+    ],
+  },
+  {
+    id: "food",
+    label: "Food",
+    links: [
+      {
+        label: "Greater Boston Food Bank",
+        href: "https://www.gbfb.org/need-food/",
+      },
+    ],
+  },
 ];
 
 function getPhotoSrc(photoRef: string | null, placeId: string | null): string | null {
@@ -1236,17 +1293,20 @@ export default function DashboardPage() {
     focusPlace(p);
   }
 
-  function formatHours(hours: string | null): string | null {
-    const h = (hours || "").toString().trim();
-    if (!h) return null;
-    // Keep it compact; the API often returns long strings.
-    return h.replace(/\s*\|\s*/g, " • ");
-  }
-
   async function exportToPDF(exportAll: boolean) {
     setIsExporting(true);
     try {
       const { jsPDF } = await import("jspdf");
+      const cleanWebsiteLabel = (raw: string | null) => {
+        const safe = safeUrl(raw);
+        if (!safe) return "";
+        try {
+          const u = new URL(safe);
+          return u.hostname.replace(/^www\./, "");
+        } catch {
+          return safe;
+        }
+      };
 
       const dataToExport = exportAll ? filteredUnique : paginatedResults;
       const doc = new jsPDF();
@@ -1310,8 +1370,6 @@ export default function DashboardPage() {
       doc.setFontSize(11);
       for (let i = 0; i < dataToExport.length; i++) {
         const p = dataToExport[i];
-        const pid = placeKey(p);
-        const hours = formatHours(p.opening_hours);
 
         // Check if we need a new page
         const estimatedHeight = 50; // Rough estimate
@@ -1345,7 +1403,8 @@ export default function DashboardPage() {
         const contactInfo: string[] = [];
         if (p.phone) contactInfo.push(`Phone: ${p.phone}`);
         if (p.email) contactInfo.push(`Email: ${p.email}`);
-        if (safeUrl(p.website)) contactInfo.push(`Website: ${safeUrl(p.website)}`);
+        const websiteLabel = cleanWebsiteLabel(p.website);
+        if (websiteLabel) contactInfo.push(`Website: ${websiteLabel}`);
 
         if (contactInfo.length > 0) {
           doc.setFont("helvetica", "normal");
@@ -1360,7 +1419,7 @@ export default function DashboardPage() {
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
           const tagsText = p.service_tags.map(t => tagLabel.get(t) ?? t).join(", ");
-          const tagLines = doc.splitTextToSize(`Tags: ${tagsText}`, contentWidth);
+          const tagLines = doc.splitTextToSize(`Service Tags: ${tagsText}`, contentWidth);
           doc.text(tagLines, margin, yPosition);
           yPosition += tagLines.length * 5;
         }
@@ -1492,6 +1551,48 @@ export default function DashboardPage() {
     );
   }
 
+  function renderListAction(place: Place, kind: "website" | "directions" | "phone" | "email") {
+    const config = {
+      website: {
+        href: safeUrl(place.website),
+        label: "Website",
+        icon: Globe,
+      },
+      directions: {
+        href: safeUrl(place.directions_url) || safeUrl(place.maps_url),
+        label: "Directions",
+        icon: MapPinned,
+      },
+      phone: {
+        href: place.phone ? `tel:${place.phone}` : null,
+        label: place.phone || "Phone",
+        icon: Phone,
+      },
+      email: {
+        href: place.email ? `mailto:${place.email}` : null,
+        label: "Email",
+        icon: Mail,
+      },
+    }[kind];
+
+    if (!config.href) return null;
+
+    const Icon = config.icon;
+    return (
+      <a
+        key={kind}
+        href={config.href}
+        target={kind === "website" || kind === "directions" ? "_blank" : undefined}
+        rel={kind === "website" || kind === "directions" ? "noreferrer" : undefined}
+        className="arrival-list-action"
+        title={config.label}
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>{config.label}</span>
+      </a>
+    );
+  }
+
   return (
     <div style={{ 
       width: "100%",
@@ -1533,7 +1634,6 @@ export default function DashboardPage() {
               borderRadius: 999,
               padding: 5,
               background: "var(--surface-2)",
-              boxShadow: "var(--shadow-md)",
             }}
             aria-label="View mode"
           >
@@ -1815,29 +1915,7 @@ export default function DashboardPage() {
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button
-                          type="button"
-                          className="text-xs underline underline-offset-4 text-primary hover:text-[var(--accent-strong)] cursor-pointer"
-                          style={{ width: "fit-content", textAlign: "left" }}
-                        >
-                          Looking for food?
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-lg">
-                        <DialogHeader>
-                          <DialogTitle>Looking for food?</DialogTitle>
-                        </DialogHeader>
-                        <div style={{ fontSize: 14, lineHeight: 1.6 }}>
-                          For food pantries, free meals, food deliveries, please visit the Greater Boston Food Bank to find resources near you:{" "}
-                          <a href="https://www.gbfb.org/need-food/" target="_blank" rel="noreferrer">
-                            https://www.gbfb.org/need-food/
-                          </a>
-                          .
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                  
                   </div>
                 )}
               </div>
@@ -2254,24 +2332,127 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* RIGHT: map */}
+        {/* RIGHT: floating additional resources trigger + map/list */}
         <div
           style={{
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            overflow: "hidden",
-            height: isMobile 
-              ? "calc(100dvh - 280px)" 
-              : desktopPanelHeight,
-            minHeight: isMobile ? 400 : undefined,
             position: "relative",
-            background: "var(--surface)",
-            boxShadow: "var(--shadow-sm)",
             gridColumn: isMobile ? "1 / -1" : "3",
             gridRow: isMobile ? "2" : "1",
             width: "100%",
           }}
         >
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                style={{
+                  position: "absolute",
+                  top: isMobile ? -42 : -46,
+                  right: 0,
+                  zIndex: 4,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: isMobile ? "8px 10px" : "9px 12px",
+                  borderRadius: 999,
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  background: "rgba(255,255,255,0.96)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  color: "var(--muted-text)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                  cursor: "pointer",
+                }}
+                aria-label="Open additional resources"
+              >
+                <span>Can&apos;t find what you need?</span>
+              </button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader className="pb-2">
+                <DialogTitle>Additional Resources</DialogTitle>
+                <DialogDescription>
+                  External resources for needs not fully covered by Arrival Resources.
+                </DialogDescription>
+              </DialogHeader>
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  maxHeight: "70vh",
+                  overflowY: "auto",
+                  paddingRight: 2,
+                }}
+              >
+                {ADDITIONAL_RESOURCE_GROUPS.map((group) => (
+                  <section
+                    key={group.id}
+                    style={{
+                      display: "grid",
+                      gap: 6,
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: "1px solid rgba(0,0,0,0.06)",
+                      background: "rgba(255,255,255,0.82)",
+                    }}
+                  >
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "var(--text)" }}>
+                      {group.label}
+                    </div>
+                    <div style={{ display: "grid", gap: 6 }}>
+                      {group.links.map((link) => (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            fontSize: 13,
+                            lineHeight: 1.45,
+                            color: "var(--primary)",
+                            textDecoration: "underline",
+                            textDecorationThickness: "1.5px",
+                            textUnderlineOffset: 3,
+                            fontWeight: 500,
+                            transition: "color 0.15s ease, text-decoration-color 0.15s ease, opacity 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = "var(--accent-strong)";
+                            e.currentTarget.style.textDecorationColor = "var(--accent-strong)";
+                            e.currentTarget.style.opacity = "1";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = "var(--primary)";
+                            e.currentTarget.style.textDecorationColor = "var(--primary)";
+                            e.currentTarget.style.opacity = "0.92";
+                          }}
+                        >
+                          {link.label}
+                        </a>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <div
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              overflow: "hidden",
+              height: isMobile 
+                ? "calc(100dvh - 280px)" 
+                : desktopPanelHeight,
+              minHeight: isMobile ? 400 : undefined,
+              position: "relative",
+              background: "var(--surface)",
+              boxShadow: "var(--shadow-sm)",
+              width: "100%",
+            }}
+          >
           {viewMode === "map" ? (
             !hasMapboxToken ? (
               <div style={{ padding: 16 }}>
@@ -2654,16 +2835,16 @@ export default function DashboardPage() {
                     disabled={isExporting}
                   >
                     <Download className="h-4 w-4 mr-2" />
-                    {isExporting ? "Exporting..." : "Download PDF"}
+                    {isExporting ? "Preparing..." : "Print / Save PDF"}
                   </Button>
                 )}
               </div>
               <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Export to PDF</DialogTitle>
+                    <DialogTitle>Print or Save as PDF</DialogTitle>
                     <DialogDescription>
-                      Choose what to export:
+                      Choose how many results to include.
                     </DialogDescription>
                   </DialogHeader>
                   <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
@@ -2675,9 +2856,9 @@ export default function DashboardPage() {
                       style={{ justifyContent: "flex-start", textAlign: "left", padding: "24px 30px" }}
                     >
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                        <div style={{ fontWeight: 600 }}>Export Current Page</div>
+                        <div style={{ fontWeight: 600 }}>Current page only</div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>
-                          Export {paginatedResults.length} result{paginatedResults.length !== 1 ? "s" : ""} from page {currentPage}
+                          Include {paginatedResults.length} result{paginatedResults.length !== 1 ? "s" : ""} from page {currentPage}
                         </div>
                       </div>
                     </Button>
@@ -2689,9 +2870,9 @@ export default function DashboardPage() {
                       style={{ justifyContent: "flex-start", textAlign: "left", padding: "24px 30px" }}
                     >
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                        <div style={{ fontWeight: 600 }}>Export All Results</div>
+                        <div style={{ fontWeight: 600 }}>All filtered results</div>
                         <div style={{ fontSize: 12, opacity: 0.7 }}>
-                          Export all {filteredUnique.length} filtered result{filteredUnique.length !== 1 ? "s" : ""}
+                          Include all {filteredUnique.length} filtered result{filteredUnique.length !== 1 ? "s" : ""}
                         </div>
                       </div>
                     </Button>
@@ -2703,16 +2884,15 @@ export default function DashboardPage() {
                   const pid = placeKey(p);
                   const isActive = !!activePlaceId && pid === activePlaceId;
                   const photo = getPhotoSrc(p.photo_ref, p.place_id);
-                  const hours = formatHours(p.opening_hours);
 
                   return (
                     <div
                       key={pid}
                       style={{
-                        border: "1px solid #eee",
+                        border: "1px solid rgba(0,0,0,0.08)",
                         borderRadius: 14,
-                        padding: 12,
-                        background: isActive ? "#f3f4f6" : "white",
+                        padding: 14,
+                        background: isActive ? "#f7f7f5" : "white",
                       }}
                     >
                       <div style={{ display: "grid", gridTemplateColumns: photo ? "120px 1fr" : "1fr", gap: 12 }}>
@@ -2734,66 +2914,47 @@ export default function DashboardPage() {
                             <span
                               style={{ width: 10, height: 10, borderRadius: 999, background: categoryColor(p.category) }}
                             />
-                            <div style={{ fontWeight: 900, fontSize: 15 }}>
+                            <div style={{ fontWeight: 900, fontSize: 16, lineHeight: 1.3 }}>
                               {p.office || p.organization || "(No name)"}
                             </div>
                           </div>
-                          {p.organization ? <div style={{ opacity: 0.8 }}>{p.organization}</div> : null}
-                          {p.address ? <div style={{ opacity: 0.7 }}>{p.address}</div> : null}
-
-                          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 2, alignItems: "center" }}>
-                            {p.phone ? (
-                              <a
-                                href={`tel:${p.phone}`}
-                                title="Call"
-                                className="text-sm underline underline-offset-4 text-foreground/80 hover:text-primary"
-                              >
-                                📞 {p.phone}
-                              </a>
-                            ) : null}
-                            {p.email ? (
-                              <a
-                                href={`mailto:${p.email}`}
-                                title={p.email}
-                                className="text-sm underline underline-offset-4 text-foreground/80 hover:text-primary"
-                              >
-                                Email
-                              </a>
-                            ) : null}
-                            {safeUrl(p.website) ? (
-                              <a
-                                href={safeUrl(p.website) as string}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-sm underline underline-offset-4 text-foreground/80 hover:text-primary"
-                              >
-                                Website
-                              </a>
-                            ) : null}
-                            {safeUrl(p.maps_url) ? (
-                              <a
-                                href={safeUrl(p.maps_url) as string}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-sm underline underline-offset-4 text-foreground/80 hover:text-primary"
-                              >
-                                Google Maps
-                              </a>
-                            ) : null}
-                          </div>
-
-                          {hours ? (
-                            <div style={{ fontSize: 13, opacity: 0.8 }}>
-                              <strong>Hours:</strong> {hours}
-                            </div>
+                          {p.organization && p.organization !== (p.office || p.organization) ? (
+                            <div style={{ fontSize: 13, color: "var(--muted-text)" }}>{p.organization}</div>
                           ) : null}
+                          {p.address ? (
+                            <div style={{ fontSize: 13, color: "var(--muted-text)", lineHeight: 1.45 }}>{p.address}</div>
+                          ) : null}
+
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, minmax(0, max-content))",
+                              gap: 8,
+                              marginTop: 4,
+                              alignItems: "center",
+                            }}
+                          >
+                            {[
+                              renderListAction(p, "website"),
+                              renderListAction(p, "directions"),
+                              renderListAction(p, "phone"),
+                              renderListAction(p, "email"),
+                            ].filter(Boolean)}
+                          </div>
 
                           {p.service_tags?.length ? (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
                               {p.service_tags.map((t) => (
                                 <span
                                   key={t}
-                                  style={{ fontSize: 12, border: "1px solid #ddd", borderRadius: 999, padding: "2px 8px" }}
+                                  style={{
+                                    fontSize: 11.5,
+                                    border: "1px solid rgba(0,0,0,0.1)",
+                                    borderRadius: 999,
+                                    padding: "2px 8px",
+                                    background: "rgba(255,255,255,0.7)",
+                                    color: "rgba(17,24,39,0.82)",
+                                  }}
                                   title={tagMeta.get(t)?.description || ""}
                                 >
                                   {tagLabel.get(t) ?? t}
@@ -2872,6 +3033,7 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+          </div>
         </div>
 
       </section>
@@ -2922,6 +3084,31 @@ export default function DashboardPage() {
         }
 
         .arrival-popup .arrival-popup-action:hover {
+          background: var(--primary-soft-10);
+          border-color: rgba(146, 64, 14, 0.18);
+          color: var(--accent-strong);
+          text-decoration: none;
+        }
+
+        .arrival-list-action {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 34px;
+          padding: 7px 10px;
+          border-radius: 10px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          background: rgba(255, 255, 255, 0.92);
+          color: var(--foreground);
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 1.2;
+          text-decoration: none;
+          transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .arrival-list-action:hover {
           background: var(--primary-soft-10);
           border-color: rgba(146, 64, 14, 0.18);
           color: var(--accent-strong);

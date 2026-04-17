@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Users, Lightbulb, Globe, Search, Languages, MessageCircle } from "lucide-react";
+import { MapPin, Users, Lightbulb, Globe, Search, Languages, MessageCircle, GraduationCap, FolderTree, StepForward } from "lucide-react";
 
 type Place = {
   category: string;
@@ -89,15 +89,15 @@ export default function AboutPage() {
 
       <div className="space-y-4 text-center pb-8">
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
-          About This Project
+          About This Tool
         </h1>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            About This Project
+            <GraduationCap className="h-5 w-5 text-primary" />
+            Part of a Project
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -127,8 +127,8 @@ export default function AboutPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5 text-primary" />
-            What&apos;s Included (and What&apos;s Not)
+            <FolderTree className="h-5 w-5 text-primary" />
+            What&apos;s Included and What&apos;s Not (yet)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -172,10 +172,16 @@ export default function AboutPage() {
           </div>
 
           <p className="text-foreground leading-relaxed">
-            This map is non-exhaustive and based primarily on sources that are publicly available, and therefore easier to map at a scale. These are often organizations and civic spaces with an explicit role in supporting newcomers, either by providing resources directly or helping people navigate them (for example: ESOL classes, employment support, citizenship services, and immigration legal help). In many cases, these places also have staff who are trained to work with newly arrived immigrants, and their services are intentionally designed around access, signposting, and support.
+          This map is selective rather than exhaustive. It includes publicly visible and relatively stable places that can play an important role in helping people settle into everyday life.
           </p>
           <p className="text-foreground leading-relaxed">
-            At the same time, many important arrival spaces are harder to capture through public data alone. Some religious institutions, for example, often play a crucial role in welcoming and serving immigrants. Some everyday commercial spaces such as barbershops, cafes, laundromats, and public spaces like parks can also be central to daily life, informal information-sharing, and community formation. Mapping these spaces typically requires local, contextual knowledge, and is often only feasible at a much finer, neighborhood scale. It also raises questions about privacy, safety, and what should or should not be made publicly visible in a public-facing map.
+          It began with organizations and civic spaces that explicitly support newcomers, such as public libraries, ESOL programs, immigrant-serving organizations, legal services, and employment support. Over time, it has expanded to include other community resources that are often identified as important in practice, including some health centers, community centers, certain religious institutions, and government offices such as the DTA and SSA. Many of these places serve both newcomers and long-term residents, which is part of their value as shared community infrastructure.
+          </p>
+          <p className="text-foreground leading-relaxed">
+          This project does not aim to map every relevant place. Some resources are already better represented by dedicated directories created by others, so they are linked in the Additional Resources section rather than duplicated here. Other important spaces—such as ethnic shops, informal gathering places, and some locally significant religious or social spaces—are harder to include responsibly because they require more local knowledge and careful judgment around privacy, safety, and public visibility.
+          </p>
+          <p className="text-foreground leading-relaxed">
+          This map should be understood as a curated starting point: a public-facing layer of community resources shaped by both publicly available information and conversations with people who know the landscape on the ground.
           </p>
         </CardContent>
       </Card>
@@ -183,7 +189,7 @@ export default function AboutPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-primary" />
+            <StepForward className="h-5 w-5 text-primary" />
             Next Steps
           </CardTitle>
           <CardDescription>
@@ -217,11 +223,6 @@ export default function AboutPage() {
               </span>
             </li>
           </ul>
-          <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-foreground leading-relaxed italic">
-              Ultimately, the goal is not just to list services, but to make arrival infrastructure more visible and usable and to support a broader conversation about how cities can better make space for arrival.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

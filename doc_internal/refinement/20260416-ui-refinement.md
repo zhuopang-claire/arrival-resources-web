@@ -130,7 +130,6 @@ Implement only map interaction improvements and popup cleanup.
 
 * Improve clickability of overlapping points at close zoom levels.
 * Keep popup-based place inspection.
-* Do not add automatic point labels.
 * Refine popup card hierarchy.
 * Standardize popup action row.
 * Order actions as Website, Google Maps / Directions, Phone, Email.
