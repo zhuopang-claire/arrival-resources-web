@@ -8,7 +8,7 @@
   {
     "tag": "material_assistance",
     "display_name": "Material Assistance",
-    "description": "Distribution of clothing, backpacks, gifts, school supplies, or other basic goods beyond food.",
+    "description": "Distribution of clothing, backpacks, gifts, school supplies, or other basic goods beyond food",
     "example_keywords": "winter clothing, backpacks, gifts for children, school supplies, material aid, baby supply bags"
   },
   {
@@ -60,15 +60,9 @@
     "example_keywords": "case management, caseworker"
   },
   {
-    "tag": "government_office",
-    "display_name": "Government Office",
-    "description": "A government-run office or official municipal/state/federal service on immigrant affairs",
-    "example_keywords": "city office, municipal office, government services, immigrant affairs office, public agency, city hall, town office"
-  },
-  {
     "tag": "cash_assistance",
     "display_name": "Cash Assistance / Income Support",
-    "description": "Direct cash or income-support benefits such as TAFDC, EAEDC, SSI, TANF, or general assistance.",
+    "description": "Direct cash or income-support benefits such as TAFDC, EAEDC, SSI, TANF, or general assistance",
     "example_keywords": "cash assistance, TAFDC, EAEDC, SSI, TANF, general assistance"
   },
   {
@@ -104,7 +98,7 @@
   {
     "tag": "school_support",
     "display_name": "School Support",
-    "description": "Support related to K–12 schooling, including enrollment help, tutoring, school navigation, parent support.",
+    "description": "Support related to K–12 schooling, including enrollment help, tutoring, school navigation, parent support",
     "example_keywords": "school support, enrollment, tutoring, homework help, parent liaison, school navigation, student support"
   },
   {
@@ -206,13 +200,13 @@
   {
     "tag": "utility_assistance",
     "display_name": "Utility & Energy Assistance",
-    "description": "Help paying for heat, fuel, electricity, or other utility costs; LIHEAP-style energy assistance.",
+    "description": "Help paying for heat, fuel, electricity, or other utility costs; LIHEAP-style energy assistance",
     "example_keywords": "heating assistance, fuel assistance, utility bill help, LIHEAP, low-income home energy assistance"
   },
   {
     "tag": "library_services",
     "display_name": "Library Services",
-    "description": "Core library services such as borrowing books, reference help, collections, and general public programs.",
+    "description": "Core library services such as borrowing books, reference help, collections, and general public programs",
     "example_keywords": "borrow books, library card, circulation, reference desk, collections, library programs, catalog help"
   },
   {
@@ -241,8 +235,8 @@
   },
   {
     "tag": "passport_services",
-    "display_name": "Passport Acceptance Services (Library)",
-    "description": "Accepting U.S. passport applications",
+    "display_name": "Passport Acceptance Services",
+    "description": "Accepting U.S. passport applications (in libraries)",
     "example_keywords": "passport services"
   },
   {

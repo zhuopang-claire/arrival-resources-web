@@ -5,7 +5,21 @@ import MapGL, { Layer, Popup, Source, type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Menu, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import {
+  X,
+  Menu,
+  ChevronDown,
+  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Map as MapIcon,
+  LayoutList,
+  Globe,
+  MapPinned,
+  Phone,
+  Mail,
+} from "lucide-react";
 import { useIsMobile } from "@/lib/useIsMobile";
 import {
   Dialog,
@@ -30,6 +44,7 @@ type Place = {
   lng: number | null;
   phone: string | null;
   maps_url: string | null;
+  directions_url: string | null;
   photo_ref: string | null;
   service_tags: string[];
 };
@@ -41,7 +56,126 @@ type TagGuide = {
   example_keywords?: string;
 };
 
+type SearchMode = "none" | "organization" | "location";
+type TagGroupDef = {
+  id: string;
+  label: string;
+  description: string;
+  tags: string[];
+};
+
 const PLACEHOLDER_IMAGE = "/placeholder-image.jpg";
+const SERVICE_TAG_GROUPS: TagGroupDef[] = [
+  {
+    id: "daily-needs",
+    label: "Daily Needs",
+    description: "Food, basic goods, housing stability, and essential support.",
+    tags: [
+      "food_access",
+      "material_assistance",
+      "housing_support",
+      "shelter",
+      "benefits_navigation",
+      "cash_assistance",
+      "utility_assistance",
+      "transportation",
+    ],
+  },
+  {
+    id: "legal-civic",
+    label: "Legal, Immigration, and Civic Support",
+    description: "Documentation, immigration help, and civic participation.",
+    tags: [
+      "immigration_legal",
+      "citizenship",
+      "id_documents",
+      "translation",
+      "notary_services",
+      "passport_services",
+      "immigrant_advocacy",
+      "civic_engagement",
+    ],
+  },
+  {
+    id: "education-language",
+    label: "Education and English",
+    description: "English learning, ESOL, and continuing education.",
+    tags: [
+      "esol",
+      "adult_education",
+    ],
+  },
+  {
+    id: "work-income",
+    label: "Work and Income",
+    description: "Job readiness, training, and small-business support.",
+    tags: [
+      "career_services",
+      "job_training",
+      "financial_literacy",
+      "entrepreneur_support",
+    ],
+  },
+  {
+    id: "health-wellbeing",
+    label: "Health and Wellbeing",
+    description: "Medical care, mental health, and wellness support.",
+    tags: [
+      "health_clinic",
+      "mental_health",
+      "public_health_programs",
+    ],
+  },
+  {
+    id: "children-family",
+    label: "Children, Youth, Family, and Elderly",
+    description: "Support for children, young people, parents, and older adults.",
+    tags: [
+      "childcare_early_childhood",
+      "youth_programs",
+      "after_school_program",
+      "family_program",
+      "school_support",
+      "elderly_support",
+    ],
+  },
+  {
+    id: "tech-library",
+    label: "Technology and Library Resources",
+    description: "Digital access, library services, space, and equipment.",
+    tags: [
+      "digital_skills",
+      "internet_access",
+      "public_computers",
+      "printing_scanning",
+      "library_services",
+      "makerspace",
+      "library_of_things",
+      "meeting_room_reservation",
+      "study_room_reservation",
+      "seed_library",
+    ],
+  },
+  {
+    id: "community-culture",
+    label: "Community and Culture",
+    description: "Community connection, mutual support, and cultural activities.",
+    tags: [
+      "mutual_aid",
+      "arts_culture",
+      "sports_recreation",
+    ],
+  },
+  {
+    id: "support-services",
+    label: "Support Services",
+    description: "Individual case management.",
+    tags: [
+      "case_management",
+    ],
+  },
+
+];
 
 function getPhotoSrc(photoRef: string | null, placeId: string | null): string | null {
   const pid = (placeId || "").toString().trim();
@@ -154,6 +288,34 @@ function safeNum(n: any): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
+function looksLikeZipCode(input: string): boolean {
+  return /^\d{5}(?:-\d{4})?$/.test(input.trim());
+}
+
+function looksLikeAddress(input: string): boolean {
+  const trimmed = input.trim();
+  if (!trimmed) return false;
+
+  if (looksLikeZipCode(trimmed)) return true;
+
+  const lower = trimmed.toLowerCase();
+  const hasStreetNumber = /\d+/.test(trimmed);
+  const hasStreetWord =
+    /\b(st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|ln|lane|ct|court|pl|place|way|sq|square|cir|circle|pkwy|parkway|hwy|highway)\b/i.test(
+      trimmed
+    );
+  const hasCityStatePattern = /,\s*[a-z .'-]+,\s*[a-z]{2}\b/i.test(lower);
+  const hasStateSuffix = /\b(ma|massachusetts)\b/i.test(trimmed);
+
+  return (hasStreetNumber && (hasStreetWord || trimmed.includes(","))) || hasCityStatePattern || hasStateSuffix;
+}
+
+function buildDefaultExpandedGroups() {
+  return Object.fromEntries(
+    SERVICE_TAG_GROUPS.map((group, index) => [group.id, index === 0])
+  );
+}
+
 function placeKey(p: Place): string {
   const pid = (p.id || p.place_id || "").toString().trim();
   const org = (p.organization || "").toString().trim();
@@ -193,15 +355,38 @@ function describeWedge(cx: number, cy: number, r: number, startAngle: number, en
   ].join(" ");
 }
 
+function offsetCoordinates(lng: number, lat: number, angleDeg: number, distanceMeters: number) {
+  const radians = (angleDeg * Math.PI) / 180;
+  const latOffset = (distanceMeters * Math.sin(radians)) / 111_320;
+  const lngOffset =
+    (distanceMeters * Math.cos(radians)) /
+    (111_320 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+
+  return {
+    lng: lng + lngOffset,
+    lat: lat + latOffset,
+  };
+}
+
 export default function DashboardPage() {
   const isMobile = useIsMobile();
+  const desktopPanelHeight = "calc(100vh - 210px)";
   const [places, setPlaces] = useState<Place[]>([]);
   const [tagGuide, setTagGuide] = useState<TagGuide[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [queryInput, setQueryInput] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
+  const [searchMode, setSearchMode] = useState<SearchMode>("none");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [expandedTagGroups, setExpandedTagGroups] = useState<Record<string, boolean>>(
+    () => buildDefaultExpandedGroups()
+  );
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestHighlight, setSuggestHighlight] = useState(-1);
+  const searchWrapRef = useRef<HTMLDivElement | null>(null);
   const [activePlaceId, setActivePlaceId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [showMunicipalities, setShowMunicipalities] = useState(false);
@@ -227,64 +412,203 @@ export default function DashboardPage() {
     | { west: number; south: number; east: number; north: number }
     | null
   >(null);
-  const [nearQuery, setNearQuery] = useState("");
   const [nearError, setNearError] = useState<string | null>(null);
-  const [nearLoading, setNearLoading] = useState(false);
+  const [searchGeocoding, setSearchGeocoding] = useState(false);
+  const [nearMeLoading, setNearMeLoading] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [currentZoom, setCurrentZoom] = useState(9.5);
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
   const hasMapboxToken = mapboxToken.trim().length > 0;
 
-  async function geocodeAndFly() {
-    const q = nearQuery.trim();
-    if (!q) return;
+  function moveMapToGeocodeFeature(feat: {
+    center: number[];
+    bbox?: number[];
+    place_type?: string[];
+  }) {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
 
-    if (!hasMapboxToken) {
-      setNearError("Mapbox token missing. Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local and restart.");
+    const pt = feat.place_type || [];
+    const isAddr = pt.includes("address");
+    const isPc = pt.includes("postcode");
+
+    if (feat.bbox && feat.bbox.length >= 4) {
+      const [w, s, e, n] = feat.bbox;
+      const maxZoom = isAddr ? 16 : isPc ? 14.5 : 13;
+      const pad = isAddr ? 72 : isPc ? 56 : 48;
+      try {
+        map.fitBounds(
+          [
+            [w, s],
+            [e, n],
+          ],
+          { padding: pad, duration: 900, maxZoom }
+        );
+      } catch {
+        const [lng, lat] = feat.center;
+        map.flyTo({ center: [lng, lat], zoom: isAddr ? 15.5 : isPc ? 13.2 : 11.5, duration: 900 });
+      }
       return;
     }
 
-    setNearLoading(true);
+    const [lng, lat] = feat.center;
+    const zoomGuess = isAddr
+      ? 15.5
+      : isPc
+        ? 13.2
+        : pt.includes("neighborhood")
+          ? 12.8
+          : pt.includes("locality")
+            ? 11.8
+            : pt.includes("place")
+              ? 10.2
+              : 11.5;
+    map.flyTo({ center: [lng, lat], zoom: zoomGuess, duration: 900 });
+  }
+
+  function shouldMoveMapToGeocodeFeature(feat: {
+    relevance?: number;
+    place_type?: string[];
+  }): boolean {
+    const rel = typeof feat.relevance === "number" ? feat.relevance : 0;
+    const pt = feat.place_type || [];
+    if (pt.includes("postcode") || pt.includes("address")) return rel >= 0.45;
+    if (pt.some((t) => ["neighborhood", "locality", "district", "place"].includes(t)))
+      return rel >= 0.72;
+    return rel >= 0.88;
+  }
+
+  async function tryGeocodeForSearch(trimmed: string): Promise<boolean> {
+    if (!trimmed || !hasMapboxToken) return false;
+
+    setSearchGeocoding(true);
     setNearError(null);
 
     try {
-      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${encodeURIComponent(
+      const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(trimmed)}.json?access_token=${encodeURIComponent(
         mapboxToken
       )}&autocomplete=true&limit=1&types=address,postcode,place,locality,neighborhood`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Geocoding failed: ${res.status}`);
-      const data = await res.json();
+      const data = (await res.json()) as {
+        features?: Array<{
+          center?: number[];
+          bbox?: number[];
+          place_type?: string[];
+          relevance?: number;
+        }>;
+      };
       const feat = data?.features?.[0];
       const center = feat?.center;
-      if (!Array.isArray(center) || center.length < 2) {
-        setNearError("No results found. Try a different address or ZIP.");
-        return;
+      if (!feat || !Array.isArray(center) || center.length < 2) {
+        setNearError("No map location found for that ZIP code or address.");
+        return false;
       }
 
-      const [lng, lat] = center;
-      mapRef.current?.flyTo({ center: [lng, lat], zoom: 12, duration: 900 });
-    } catch (e: any) {
-      setNearError(e?.message || "Geocoding failed");
+      if (shouldMoveMapToGeocodeFeature(feat)) {
+        moveMapToGeocodeFeature({
+          center: center as number[],
+          bbox: feat.bbox,
+          place_type: feat.place_type,
+        });
+        return true;
+      }
+      setNearError("No map location found for that ZIP code or address.");
+      return false;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Geocoding failed";
+      setNearError(msg);
+      return false;
     } finally {
-      setNearLoading(false);
+      setSearchGeocoding(false);
     }
   }
 
-  function clearNameSearch() {
-    setQueryInput("");
-    setQuery("");
+  async function submitUnifiedSearch() {
+    const trimmed = searchInput.trim();
+    setSuggestOpen(false);
+    setSuggestHighlight(-1);
     setActivePlaceId(null);
+    setNearError(null);
+
+    if (!trimmed) {
+      setQuery("");
+      setSearchMode("none");
+      return;
+    }
+
+    const isLocationSearch = looksLikeZipCode(trimmed) || looksLikeAddress(trimmed);
+    if (isLocationSearch) {
+      if (!hasMapboxToken) {
+        setSearchMode("location");
+        setQuery("");
+        setNearError("Mapbox token missing. Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local and restart.");
+        return;
+      }
+
+      const moved = await tryGeocodeForSearch(trimmed);
+      if (moved) {
+        setQuery("");
+        setSearchMode("location");
+      }
+      else {
+        setQuery("");
+        setSearchMode("location");
+      }
+      return;
+    }
+
+    setQuery(trimmed);
+    setSearchMode("organization");
   }
 
-  function clearNearSearch() {
-    setNearQuery("");
+  function clearUnifiedSearch() {
+    setSearchInput("");
+    setQuery("");
+    setSearchMode("none");
     setNearError(null);
-    // Reset map to initial view
-    mapRef.current?.flyTo({ 
-      center: [-71.0589, 42.3601], 
-      zoom: 9.5, 
-      duration: 900 
+    setSuggestOpen(false);
+    setSuggestHighlight(-1);
+    setActivePlaceId(null);
+    mapRef.current?.flyTo({
+      center: [-71.0589, 42.3601],
+      zoom: 9.5,
+      duration: 900,
     });
+  }
+
+  function requestUserNearMe() {
+    if (!hasMapboxToken) {
+      setNearError("Mapbox token missing. Add NEXT_PUBLIC_MAPBOX_TOKEN to .env.local and restart.");
+      return;
+    }
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setNearError("Location is not available in this browser.");
+      return;
+    }
+    setNearMeLoading(true);
+    setNearError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          mapRef.current?.flyTo({
+            center: [longitude, latitude],
+            zoom: 13.2,
+            duration: 900,
+          });
+        } catch {
+          // ignore
+        }
+        setNearMeLoading(false);
+      },
+      (err) => {
+        setNearMeLoading(false);
+        setNearError(err.message || "Could not get your location.");
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60_000 }
+    );
   }
 
   useEffect(() => {
@@ -410,23 +734,95 @@ export default function DashboardPage() {
     return m;
   }, [tagGuide]);
 
+  const placeAutocompleteSuggestions = useMemo(() => {
+    const q = searchInput.trim().toLowerCase();
+    if (q.length < 2) return [] as Place[];
 
-  const filtered = useMemo(() => {
+    type Scored = { p: Place; score: number };
+    const scored: Scored[] = [];
+
+    for (const p of places) {
+      const org = (
+        (p as { organization?: string; organisation?: string }).organization ??
+        (p as { organisation?: string }).organisation ??
+        ""
+      )
+        .toString()
+        .trim();
+      const office = (p.office || "").toString().trim();
+      const hay = `${org} ${office}`.toLowerCase();
+      const orgLower = org.toLowerCase();
+      const officeLower = office.toLowerCase();
+
+      let score = 0;
+      const primary = orgLower || officeLower;
+      if (!primary) continue;
+
+      if (orgLower.startsWith(q)) score += 120;
+      else if (officeLower.startsWith(q)) score += 110;
+      else if (primary.startsWith(q)) score += 100;
+      else if (orgLower.includes(q)) score += 70;
+      else if (officeLower.includes(q)) score += 65;
+      else if (hay.includes(q)) score += 40;
+
+      if (score > 0) scored.push({ p, score });
+    }
+
+    scored.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const ao = (a.p.organization || "").toLowerCase();
+      const bo = (b.p.organization || "").toLowerCase();
+      return ao.localeCompare(bo);
+    });
+
+    const seen = new Set<string>();
+    const out: Place[] = [];
+    for (const { p } of scored) {
+      const k = placeKey(p);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(p);
+      if (out.length >= 8) break;
+    }
+    return out;
+  }, [searchInput, places]);
+
+  useEffect(() => {
+    function onDocMouseDown(e: MouseEvent) {
+      const el = searchWrapRef.current;
+      if (!el) return;
+      if (e.target instanceof Node && !el.contains(e.target)) {
+        setSuggestOpen(false);
+        setSuggestHighlight(-1);
+      }
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    return () => document.removeEventListener("mousedown", onDocMouseDown);
+  }, []);
+
+  const filteredBySearch = useMemo(() => {
     const q = query.trim().toLowerCase();
 
     return places.filter((p) => {
       const org = ((p as any).organization ?? (p as any).organisation ?? "").toString();
       const office = (p.office ?? "").toString();
       const hay = `${org} ${office}`.toLowerCase();
-      const matchText = !q || hay.includes(q);
+      return searchMode !== "organization" || !q || hay.includes(q);
+    });
+  }, [places, query, searchMode]);
 
+  const filtered = useMemo(() => {
+    return filteredBySearch.filter((p) => {
       const matchTags =
         selectedTags.length === 0 ||
-        selectedTags.every((t) => (p.service_tags || []).includes(t));
+        selectedTags.some((t) => (p.service_tags || []).includes(t));
+      const matchCategories =
+        selectedCategories.length === 0 ||
+        selectedCategories.includes((p.category || "Uncategorized").toString());
 
-      return matchText && matchTags;
+      return matchTags && matchCategories;
     });
-  }, [places, query, selectedTags]);
+  }, [filteredBySearch, selectedCategories, selectedTags]);
 
   const filteredUnique = useMemo(() => {
     const seen = new Set<string>();
@@ -454,6 +850,19 @@ export default function DashboardPage() {
     });
   }, [filteredUnique, mapBounds, viewMode]);
 
+  const searchScopedPlacesInView = useMemo(() => {
+    if (viewMode !== "map" || !mapBounds) return filteredBySearch;
+
+    const { west, south, east, north } = mapBounds;
+
+    return filteredBySearch.filter((p) => {
+      const lat = safeNum(p.lat);
+      const lng = safeNum(p.lng);
+      if (lat === null || lng === null) return false;
+      return lng >= west && lng <= east && lat >= south && lat <= north;
+    });
+  }, [filteredBySearch, mapBounds, viewMode]);
+
   // Pagination logic for list view
   const totalPages = useMemo(() => {
     return Math.ceil(filteredUnique.length / itemsPerPage);
@@ -469,55 +878,119 @@ export default function DashboardPage() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, selectedTags, viewMode]);
+  }, [query, searchMode, selectedCategories, selectedTags, viewMode]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
-    for (const p of placesInView) for (const t of p.service_tags || []) set.add(t);
+    for (const p of searchScopedPlacesInView) for (const t of p.service_tags || []) set.add(t);
+    for (const t of selectedTags) set.add(t);
     return Array.from(set).sort((a, b) => {
       const la = (tagLabel.get(a) ?? a).toLowerCase();
       const lb = (tagLabel.get(b) ?? b).toLowerCase();
       return la.localeCompare(lb);
     });
-  }, [placesInView, tagLabel]);
+  }, [searchScopedPlacesInView, selectedTags, tagLabel]);
 
-  const countsByCategory = useMemo<Array<[string, number]>>(() => {
-    const m = new Map<string, number>();
-    for (const p of placesInView) {
-      const key = p.category || "Uncategorized";
-      m.set(key, (m.get(key) || 0) + 1);
+  const categoryOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of searchScopedPlacesInView) {
+      const key = (p.category || "Uncategorized").toString() || "Uncategorized";
+      counts.set(key, (counts.get(key) || 0) + 1);
     }
-  
-    const entries: Array<[string, number]> = Array.from(m.entries());
-    entries.sort((a, b) => b[1] - a[1]);
-    return entries;
-  }, [placesInView]);
+    for (const category of selectedCategories) {
+      if (!counts.has(category)) counts.set(category, 0);
+    }
+
+    return Array.from(counts.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.label.localeCompare(b.label);
+      });
+  }, [searchScopedPlacesInView, selectedCategories]);
+
+  const groupedTagSections = useMemo(() => {
+    const visibleTags = new Set(allTags);
+    const assigned = new Set<string>();
+    const sections: Array<TagGroupDef & { visibleTags: string[] }> = [];
+
+    for (const group of SERVICE_TAG_GROUPS) {
+      const visible = group.tags.filter((tag) => visibleTags.has(tag));
+      visible.forEach((tag) => assigned.add(tag));
+      if (visible.length > 0) {
+        sections.push({ ...group, visibleTags: visible });
+      }
+    }
+
+    const remaining = allTags.filter((tag) => !assigned.has(tag));
+    if (remaining.length > 0) {
+      sections.push({
+        id: "other-services",
+        label: "Other Services",
+        description: "Additional support areas available in the current results.",
+        tags: remaining,
+        visibleTags: remaining,
+      });
+    }
+
+    return sections;
+  }, [allTags]);
 
   // --- Mapbox clustering setup ---
   const placesGeoJSON = useMemo(() => {
+    const zoomForOffsets = currentZoom;
+    const shouldOffsetOverlaps = zoomForOffsets >= 13.5;
+    const displayPlaces = filteredUnique
+      .filter((p) => safeNum(p.lat) !== null && safeNum(p.lng) !== null)
+      .slice()
+      .sort((a, b) => placeKey(a).localeCompare(placeKey(b)));
+
+    const overlapGroups = new Map<string, Place[]>();
+    for (const p of displayPlaces) {
+      const lat = safeNum(p.lat) as number;
+      const lng = safeNum(p.lng) as number;
+      const key = `${lat.toFixed(4)}:${lng.toFixed(4)}`;
+      const group = overlapGroups.get(key) || [];
+      group.push(p);
+      overlapGroups.set(key, group);
+    }
+
     return {
       type: "FeatureCollection" as const,
-      features: filteredUnique
-        .filter((p) => safeNum(p.lat) !== null && safeNum(p.lng) !== null)
-        .map((p) => {
+      features: displayPlaces.map((p) => {
           const lat = safeNum(p.lat) as number;
           const lng = safeNum(p.lng) as number;
           const pid = placeKey(p);
+          const overlapKey = `${lat.toFixed(4)}:${lng.toFixed(4)}`;
+          const group = overlapGroups.get(overlapKey) || [p];
+          const index = group.findIndex((candidate) => placeKey(candidate) === pid);
+          const overlapCount = group.length;
+          const shouldApplyOffset = shouldOffsetOverlaps && overlapCount > 1 && index >= 0;
+          const ringIndex = index < 0 ? 0 : index;
+          const angle = overlapCount <= 1 ? 0 : (360 / overlapCount) * ringIndex;
+          const distanceMeters = overlapCount <= 6 ? 14 : 18 + Math.floor(ringIndex / 6) * 6;
+          const adjusted = shouldApplyOffset
+            ? offsetCoordinates(lng, lat, angle, distanceMeters)
+            : { lng, lat };
+
           return {
             type: "Feature" as const,
             geometry: {
               type: "Point" as const,
-              coordinates: [lng, lat] as [number, number],
+              coordinates: [adjusted.lng, adjusted.lat] as [number, number],
             },
             properties: {
               pid,
               category: p.category || "",
               color: categoryColor(p.category || ""),
+              trueLng: lng,
+              trueLat: lat,
+              overlapCount,
             },
           };
         }),
     };
-  }, [filteredUnique]);
+  }, [currentZoom, filteredUnique]);
 
   const clusterLayer: any = {
     id: "clusters",
@@ -578,6 +1051,18 @@ export default function DashboardPage() {
     },
   };
 
+  const unclusteredHitAreaLayer: any = {
+    id: "unclustered-hit-area",
+    type: "circle",
+    source: "places",
+    filter: ["!", ["has", "point_count"]],
+    paint: {
+      "circle-color": "#000000",
+      "circle-radius": 16,
+      "circle-opacity": 0.01,
+    },
+  };
+
   const muniFillLayer: any = {
     id: "muni-fill",
     type: "fill",
@@ -605,6 +1090,16 @@ export default function DashboardPage() {
     if (!activePlaceId) return null;
     return places.find((p) => placeKey(p) === activePlaceId) || null;
   }, [activePlaceId, places]);
+
+  const activePopupCoordinates = useMemo(() => {
+    if (!activePlaceId) return null;
+    const feature = (placesGeoJSON.features || []).find(
+      (item) => item.properties?.pid === activePlaceId
+    );
+    const coords = feature?.geometry?.coordinates;
+    if (!coords || coords.length < 2) return null;
+    return { lng: coords[0], lat: coords[1] };
+  }, [activePlaceId, placesGeoJSON]);
 
   useEffect(() => {
     if (viewMode !== "map") return;
@@ -674,6 +1169,40 @@ export default function DashboardPage() {
     );
   }
 
+  function removeTag(tag: string) {
+    setSelectedTags((prev) => prev.filter((x) => x !== tag));
+  }
+
+  function toggleCategory(category: string) {
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((x) => x !== category) : [...prev, category]
+    );
+  }
+
+  function removeCategory(category: string) {
+    setSelectedCategories((prev) => prev.filter((x) => x !== category));
+  }
+
+  function toggleTagGroup(groupId: string) {
+    setExpandedTagGroups((prev) => {
+      const nextValue = !prev[groupId];
+      if (!nextValue) {
+        return {
+          ...prev,
+          [groupId]: false,
+        };
+      }
+
+      const collapsed = Object.fromEntries(
+        Object.keys(prev).map((key) => [key, false])
+      ) as Record<string, boolean>;
+      return {
+        ...collapsed,
+        [groupId]: true,
+      };
+    });
+  }
+
   function focusPlace(p: Place) {
     const lat = safeNum(p.lat);
     const lng = safeNum(p.lng);
@@ -693,6 +1222,18 @@ export default function DashboardPage() {
     } catch {
       // ignore
     }
+  }
+
+  function selectPlaceSuggestion(p: Place) {
+    setSuggestOpen(false);
+    setSuggestHighlight(-1);
+    const label = [p.organization, p.office].filter(Boolean).join(" — ").trim();
+    const orgQuery = [p.organization, p.office].filter(Boolean).join(" ").trim();
+    setSearchInput(label);
+    setQuery(orgQuery);
+    setSearchMode("organization");
+    setNearError(null);
+    focusPlace(p);
   }
 
   function formatHours(hours: string | null): string | null {
@@ -751,10 +1292,11 @@ export default function DashboardPage() {
       yPosition += 6;
 
       // Add filter info if any
-      if (query || selectedTags.length > 0) {
+      if (query || selectedTags.length > 0 || selectedCategories.length > 0) {
         const filterText = [
           query ? `Search: "${query}"` : null,
           selectedTags.length > 0 ? `Tags: ${selectedTags.map(t => tagLabel.get(t) ?? t).join(", ")}` : null,
+          selectedCategories.length > 0 ? `Categories: ${selectedCategories.join(", ")}` : null,
         ].filter(Boolean).join(" | ");
         doc.text(`Filters: ${filterText}`, margin, yPosition);
         yPosition += 6;
@@ -852,6 +1394,104 @@ export default function DashboardPage() {
     }
   }
 
+  function renderTagButton(tag: string) {
+    const active = selectedTags.includes(tag);
+    return (
+      <Button
+        key={tag}
+        variant="outline"
+        size="sm"
+        aria-pressed={active}
+        className={`rounded-full h-8 px-3 ${
+          active
+            ? "border-primary bg-primary/18 shadow-sm ring-2 ring-primary/25 hover:bg-primary/22"
+            : "hover:bg-secondary"
+        }`}
+        onClick={() => toggleTag(tag)}
+        title={tagMeta.get(tag)?.description || ""}
+      >
+        {tagLabel.get(tag) ?? tag}
+      </Button>
+    );
+  }
+
+  function renderCategoryButton(category: string, count?: number) {
+    const active = selectedCategories.includes(category);
+    return (
+      <Button
+        key={category}
+        variant="outline"
+        size="sm"
+        aria-pressed={active}
+        className={`rounded-full h-8 px-3 ${
+          active
+            ? "border-primary bg-primary/18 shadow-sm ring-2 ring-primary/25 hover:bg-primary/22"
+            : "hover:bg-secondary"
+        }`}
+        onClick={() => toggleCategory(category)}
+      >
+        <span
+          aria-hidden
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 999,
+            background: categoryColor(category),
+            display: "inline-block",
+            marginRight: 6,
+            border: "1px solid rgba(0,0,0,0.08)",
+          }}
+        />
+        {category}
+        {typeof count === "number" ? (
+          <span style={{ marginLeft: 6, fontSize: 11, opacity: 0.7 }}>{count}</span>
+        ) : null}
+      </Button>
+    );
+  }
+
+  function renderPopupAction(place: Place, kind: "website" | "directions" | "phone" | "email") {
+    const config = {
+      website: {
+        href: safeUrl(place.website),
+        label: "Website",
+        icon: Globe,
+      },
+      directions: {
+        href: safeUrl(place.directions_url),
+        label: "Directions",
+        icon: MapPinned,
+      },
+      phone: {
+        href: place.phone ? `tel:${place.phone}` : null,
+        label: place.phone || "Phone",
+        icon: Phone,
+      },
+      email: {
+        href: place.email ? `mailto:${place.email}` : null,
+        label: "Email",
+        icon: Mail,
+      },
+    }[kind];
+
+    if (!config.href) return null;
+
+    const Icon = config.icon;
+    return (
+      <a
+        key={kind}
+        href={config.href}
+        target={kind === "website" || kind === "directions" ? "_blank" : undefined}
+        rel={kind === "website" || kind === "directions" ? "noreferrer" : undefined}
+        title={config.label}
+        className="arrival-popup-action"
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>{config.label}</span>
+      </a>
+    );
+  }
+
   return (
     <div style={{ 
       width: "100%",
@@ -863,7 +1503,6 @@ export default function DashboardPage() {
       <main style={{ display: "grid", gap: 16, width: "100%" }}>
       <header style={{ display: "grid", gap: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <h1 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 700, margin: 0 }}>Resources for Arrival</h1>
           {isMobile && (
             <Button
               type="button"
@@ -888,31 +1527,42 @@ export default function DashboardPage() {
 
           <div
             style={{
-              display: "flex",
-              gap: 6,
-              border: "1px solid var(--border)",
+              display: "inline-flex",
+              gap: 4,
+              border: "1px solid var(--primary-border-35)",
               borderRadius: 999,
-              padding: 4,
-              background: "var(--surface)",
+              padding: 5,
+              background: "var(--surface-2)",
+              boxShadow: "var(--shadow-md)",
             }}
             aria-label="View mode"
           >
             <Button
               type="button"
               variant={viewMode === "map" ? "default" : "ghost"}
-              size="sm"
+              size="default"
               onClick={() => setViewMode("map")}
-              className="rounded-full"
+              className={
+                viewMode === "map"
+                  ? "rounded-full gap-2 px-4 font-semibold shadow-sm"
+                  : "rounded-full gap-2 px-4 text-muted-foreground"
+              }
             >
+              <MapIcon className="h-4 w-4 shrink-0" aria-hidden />
               Map
             </Button>
             <Button
               type="button"
               variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
+              size="default"
               onClick={() => setViewMode("list")}
-              className="rounded-full"
+              className={
+                viewMode === "list"
+                  ? "rounded-full gap-2 px-4 font-semibold shadow-sm"
+                  : "rounded-full gap-2 px-4 text-muted-foreground"
+              }
             >
+              <LayoutList className="h-4 w-4 shrink-0" aria-hidden />
               List
             </Button>
           </div>
@@ -925,7 +1575,8 @@ export default function DashboardPage() {
           ? "1fr" 
           : `${sidebarWidth}px 10px 1fr`, 
         gap: isMobile ? 12 : 16,
-        gridTemplateRows: isMobile ? "auto 1fr auto" : "1fr"
+        gridTemplateRows: isMobile ? "auto 1fr auto" : "auto",
+        alignItems: "start",
       }}>
         {/* Mobile: when sidebar closed, show Filters chip to open it */}
         {isMobile && !sidebarOpen ? (
@@ -955,9 +1606,9 @@ export default function DashboardPage() {
               ? sidebarOpen 
                 ? "auto" 
                 : 0 
-              : "calc(100vh - 210px)",
-            maxHeight: isMobile ? "60vh" : "calc(100vh - 210px)",
-            overflow: isMobile ? "auto" : "hidden",
+              : "auto",
+            maxHeight: isMobile ? "60vh" : "none",
+            overflow: isMobile ? "auto" : "visible",
             background: "var(--surface-2)",
             boxShadow: "var(--shadow-sm)",
             gridColumn: isMobile ? "1 / -1" : "1",
@@ -966,81 +1617,135 @@ export default function DashboardPage() {
             opacity: isMobile && !sidebarOpen ? 0 : 1,
           }}
         >
-          {/* Search */}
-          <div style={{ display: "flex", gap: 8 }}>
-            <div style={{ position: "relative", flex: 1 }}>
+          {/* Unified search (name, ZIP, or address) + Near me */}
+          <div ref={searchWrapRef} style={{ display: "grid", gap: 8 }}>
+            <div style={{ position: "relative", width: "100%" }}>
               <Input
-                className="flex-1 h-10 pr-8"
-                value={queryInput}
-                onChange={(e) => setQueryInput(e.target.value)}
+                className="flex-1 h-10 w-full pr-8"
+                value={searchInput}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSearchInput(v);
+                  setSuggestHighlight(-1);
+                  setSuggestOpen(v.trim().length >= 2);
+                }}
+                onFocus={() => {
+                  if (searchInput.trim().length >= 2) setSuggestOpen(true);
+                }}
                 onKeyDown={(e) => {
+                  const list = placeAutocompleteSuggestions;
+                  if (e.key === "ArrowDown") {
+                    if (list.length === 0) return;
+                    e.preventDefault();
+                    setSuggestOpen(true);
+                    setSuggestHighlight((h) =>
+                      h < 0 ? 0 : Math.min(list.length - 1, h + 1)
+                    );
+                    return;
+                  }
+                  if (e.key === "ArrowUp") {
+                    if (list.length === 0) return;
+                    e.preventDefault();
+                    setSuggestHighlight((h) => Math.max(-1, h - 1));
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setSuggestOpen(false);
+                    setSuggestHighlight(-1);
+                    return;
+                  }
                   if (e.key === "Enter") {
-                    setQuery(queryInput);
-                    setActivePlaceId(null);
+                    e.preventDefault();
+                    if (
+                      suggestOpen &&
+                      suggestHighlight >= 0 &&
+                      list[suggestHighlight]
+                    ) {
+                      selectPlaceSuggestion(list[suggestHighlight]);
+                    } else {
+                      submitUnifiedSearch();
+                    }
                   }
                 }}
-                placeholder="Search by name…"
+                placeholder="Search by organization name, zip code, or address."
                 style={{ background: "var(--surface)" }}
+                role="combobox"
+                aria-expanded={suggestOpen && placeAutocompleteSuggestions.length > 0}
+                aria-controls={
+                  suggestOpen && placeAutocompleteSuggestions.length > 0
+                    ? "place-search-suggestions"
+                    : undefined
+                }
+                aria-autocomplete="list"
               />
-              {queryInput && (
+              {searchInput.trim() !== "" && (
                 <button
                   type="button"
-                  onClick={clearNameSearch}
+                  onClick={clearUnifiedSearch}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="Clear search"
-                  title="Clear search"
+                  aria-label="Clear search and reset map"
+                  title="Clear search and reset map"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
+              {suggestOpen && placeAutocompleteSuggestions.length > 0 ? (
+                <div
+                  id="place-search-suggestions"
+                  role="listbox"
+                  className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-auto rounded-md border border-border bg-popover py-1 text-popover-foreground shadow-md"
+                >
+                  {placeAutocompleteSuggestions.map((p, i) => {
+                    const primary = (p.organization || "").trim() || (p.office || "").trim();
+                    const secondary = (p.office || "").trim();
+                    const sub =
+                      secondary && primary !== secondary ? secondary : (p.address || "").trim();
+                    return (
+                      <button
+                        key={placeKey(p)}
+                        type="button"
+                        role="option"
+                        aria-selected={i === suggestHighlight}
+                        className={`flex w-full flex-col gap-0.5 px-3 py-2 text-left text-sm hover:bg-accent ${
+                          i === suggestHighlight ? "bg-accent" : ""
+                        }`}
+                        onMouseEnter={() => setSuggestHighlight(i)}
+                        onMouseDown={(ev) => {
+                          ev.preventDefault();
+                          selectPlaceSuggestion(p);
+                        }}
+                      >
+                        <span className="font-medium text-foreground">{primary}</span>
+                        {sub ? (
+                          <span className="text-xs text-muted-foreground">{sub}</span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
-            <Button
-              type="button"
-              className="h-10"
-              onClick={() => {
-                setQuery(queryInput);
-                setActivePlaceId(null);
-              }}
-              style={{ whiteSpace: "nowrap" }}
-            >
-              Search
-            </Button>
-          </div>
-
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ position: "relative", flex: 1 }}>
-                <Input
-                  className="flex-1 h-10 pr-8"
-                  value={nearQuery}
-                  onChange={(e) => setNearQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") geocodeAndFly();
-                  }}
-                  placeholder={isMobile ? "Address or ZIP" : "Search near you (address or ZIP)…"}
-                  style={{ background: "var(--surface)" }}
-                />
-                {nearQuery && (
-                  <button
-                    type="button"
-                    onClick={clearNearSearch}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Clear search"
-                    title="Clear search and reset map view"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
               <Button
                 type="button"
                 className="h-10"
-                onClick={geocodeAndFly}
-                disabled={nearLoading}
-                title="Pan the map to your location"
+                onClick={submitUnifiedSearch}
+                disabled={searchGeocoding}
                 style={{ whiteSpace: "nowrap" }}
               >
-                {nearLoading ? "Searching…" : "Near me"}
+                {searchGeocoding ? "Searching…" : "Search"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10"
+                onClick={requestUserNearMe}
+                disabled={nearMeLoading}
+                title="Center the map on your current location (browser permission required)"
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {nearMeLoading ? "Locating…" : "Near me"}
               </Button>
             </div>
             {nearError ? (
@@ -1049,7 +1754,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Tags */}
-          <div style={{ display: "grid", gap: 10, minHeight: 0 }}>
+          <div style={{ display: "grid", gap: 10, minHeight: 0, flex: "1 1 auto" }}>
             <div
               style={{
                 display: "flex",
@@ -1061,6 +1766,16 @@ export default function DashboardPage() {
             >
               <div style={{ display: "grid", gap: 4 }}>
                 <div style={{ fontWeight: 700 }}>Service Tags</div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    lineHeight: 1.45,
+                    color: "var(--muted-text)",
+                  }}
+                >
+                  Browse by need. Primary filter across Map and List views.
+                </p>
 
                 {/* Desktop: helper links under title */}
                 {!isMobile && (
@@ -1133,48 +1848,168 @@ export default function DashboardPage() {
                 size="sm"
                 className="rounded-full"
                 onClick={() => setSelectedTags([])}
-                title="Clear selected tags"
+                title="Clear all selected service tags"
               >
-                Clear
+                Clear all
               </Button>
             </div>
 
-            {/* Mobile: tag buttons first, then helper links */}
-            {isMobile && (
-              <>
-                <div style={{ fontSize: 12, opacity: 0.8, marginTop: 2 }}>Tap to filter by tag</div>
+            {selectedTags.length > 0 ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>
+                  Active filters
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {selectedTags.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => removeTag(t)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-primary/50 bg-primary/14 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-primary/20"
+                    >
+                      <span>{tagLabel.get(t) ?? t}</span>
+                      <X className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                      <span className="sr-only">Remove {tagLabel.get(t) ?? t}</span>
+                    </button>
+                  ))}
+                </div>
+                {selectedTags.length >= 2 ? (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 1.45,
+                      color: "var(--muted-text)",
+                      margin: 0,
+                    }}
+                  >
+                    Showing organizations that match{" "}
+                    <strong style={{ color: "var(--text)" }}>any</strong> of the selected tags.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                display: "grid",
+                gap: 10,
+                marginTop: 4,
+                paddingRight: 2,
+              }}
+            >
+              {groupedTagSections.length === 0 ? (
                 <div
                   style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: 8,
-                    marginTop: 4,
-                    maxHeight: "none",
-                    overflow: "visible",
-                    paddingRight: 4,
+                    border: "1px dashed var(--border)",
+                    borderRadius: 12,
+                    padding: 12,
+                    fontSize: 12,
+                    color: "var(--muted-text)",
+                    background: "var(--surface)",
                   }}
                 >
-                  {allTags.map((t) => {
-                    const active = selectedTags.includes(t);
-                    return (
-                      <Button
-                        key={t}
-                        variant="outline"
-                        size="sm"
-                        aria-pressed={active}
-                        className={`rounded-full h-8 px-3 ${
-                          active
-                            ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
-                            : "hover:bg-secondary"
-                        }`}
-                        onClick={() => toggleTag(t)}
-                        title={tagMeta.get(t)?.description || ""}
-                      >
-                        {tagLabel.get(t) ?? t}
-                      </Button>
-                    );
-                  })}
+                  No service tags are available in the current results. Clear filters or move the map to see more.
                 </div>
+              ) : (
+                groupedTagSections.map((group) => {
+                  const isOpen = expandedTagGroups[group.id] ?? true;
+                  return (
+                    <section
+                      key={group.id}
+                      style={{
+                        border: "1px solid var(--border)",
+                        borderRadius: 12,
+                        background: "var(--surface)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleTagGroup(group.id)}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          padding: "10px 12px",
+                          textAlign: "left",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                        }}
+                        aria-expanded={isOpen}
+                        aria-controls={`tag-group-${group.id}`}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: 14,
+                              minWidth: 0,
+                            }}
+                          >
+                            {group.label}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: "var(--muted-text)",
+                              whiteSpace: "nowrap",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {group.visibleTags.length} {group.visibleTags.length === 1 ? "tag" : "tags"}
+                          </div>
+                        </div>
+                        {isOpen ? (
+                          <ChevronUp className="h-4 w-4 shrink-0" style={{ opacity: 0.65 }} />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 shrink-0" style={{ opacity: 0.65 }} />
+                        )}
+                      </button>
+
+                      {isOpen ? (
+                        <div
+                          id={`tag-group-${group.id}`}
+                          style={{
+                            display: "grid",
+                            gap: 10,
+                            padding: "10px 12px 12px",
+                            borderTop: "1px solid rgba(0,0,0,0.04)",
+                            background: "rgba(255,255,255,0.72)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 12,
+                              lineHeight: 1.4,
+                              color: "var(--muted-text)",
+                            }}
+                          >
+                            {group.description}
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {group.visibleTags.map((tag) => renderTagButton(tag))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </section>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Mobile: helper links below grouped tags */}
+            {isMobile && (
+              <div style={{ display: "grid", gap: 6, alignItems: "flex-start" }}>
                 <div style={{ display: "grid", gap: 6, alignItems: "flex-start" }}>
                   <Dialog>
                     <DialogTrigger asChild>
@@ -1235,113 +2070,152 @@ export default function DashboardPage() {
                     </DialogContent>
                   </Dialog>
                 </div>
-              </>
-            )}
-
-            {/* Desktop: tag buttons (with scroll) */}
-            {!isMobile && (
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 8,
-                  marginTop: 8,
-                  maxHeight: 360,
-                  overflow: "auto",
-                  paddingRight: 4,
-                }}
-              >
-                {allTags.map((t) => {
-                  const active = selectedTags.includes(t);
-                  return (
-                    <Button
-                      key={t}
-                      variant="outline"
-                      size="sm"
-                      aria-pressed={active}
-                      className={`rounded-full h-8 px-3 ${
-                        active
-                          ? "border-primary/40 bg-primary/10 hover:bg-primary/15"
-                          : "hover:bg-secondary"
-                      }`}
-                      onClick={() => toggleTag(t)}
-                      title={tagMeta.get(t)?.description || ""}
-                    >
-                      {tagLabel.get(t) ?? t}
-                    </Button>
-                  );
-                })}
-              </div>
-            )}
-
-            {selectedTags.length > 0 && (
-              <div style={{ fontSize: 12, opacity: 0.8 }}>
-                Selected: {selectedTags.map((t) => tagLabel.get(t) ?? t).join(", ")}
               </div>
             )}
           </div>
 
-          {/* Counts by category - desktop only; on mobile shown below map */}
-          {!isMobile && (
-            <div style={{ borderTop: "1px solid #eee", paddingTop: 16, marginTop: 4 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>Counts by Category</div>
-
-              {countsByCategory.length === 0 ? (
-                <div style={{ fontSize: 12, opacity: 0.7 }}>No places in view.</div>
-              ) : (
-                <div style={{ display: "grid", gap: 8 }}>
-                  {(() => {
-                    const max = Math.max(...countsByCategory.map(([, n]) => n));
-                    return countsByCategory.map(([cat, n]) => {
-                      const pct = max > 0 ? (n / max) * 100 : 0;
-                      return (
-                        <div key={cat} style={{ display: "grid", gap: 4 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
-                            <span style={{ flex: "1 1 0%", minWidth: 0, wordBreak: "break-word", opacity: 0.85 }}>{cat}</span>
-                            <span style={{ fontWeight: 800, flexShrink: 0 }}>{n}</span>
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span
-                              style={{
-                                width: 18,
-                                textAlign: "center",
-                                fontSize: 14,
-                                lineHeight: "14px",
-                                opacity: 0.9,
-                              }}
-                              title={cat}
-                              aria-label={cat}
-                            >
-                              {categoryIcon(cat)}
-                            </span>
-
-                            <div
-                              style={{
-                                flex: 1,
-                                height: 8,
-                                background: "#f3f4f6",
-                                borderRadius: 999,
-                                overflow: "hidden",
-                                border: "1px solid #eee",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  height: "100%",
-                                  width: `${pct}%`,
-                                  background: categoryColor(cat),
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
+          <div
+            style={{
+              display: "grid",
+              gap: 10,
+              borderTop: "1px solid rgba(0,0,0,0.08)",
+              paddingTop: 16,
+              marginTop: 10,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setCategoryOpen((prev) => !prev)}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                width: "100%",
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+              aria-expanded={categoryOpen}
+              aria-controls="sidebar-category-section"
+            >
+              <div style={{ display: "grid", gap: 3 }}>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Category</div>
+                <div style={{ fontSize: 12, color: "var(--muted-text)", lineHeight: 1.4 }}>
+                  Secondary filter across both Map and List views.
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {selectedCategories.length > 0 ? (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      color: "var(--muted-text)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {selectedCategories.length} selected
+                  </span>
+                ) : null}
+                {categoryOpen ? (
+                  <ChevronUp className="h-4 w-4 shrink-0" style={{ opacity: 0.65 }} />
+                ) : (
+                  <ChevronDown className="h-4 w-4 shrink-0" style={{ opacity: 0.65 }} />
+                )}
+              </div>
+            </button>
+
+            {selectedCategories.length > 0 ? (
+              <div style={{ display: "grid", gap: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text)" }}>
+                  Selected categories
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {selectedCategories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => removeCategory(category)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-primary/16"
+                    >
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: 999,
+                          background: categoryColor(category),
+                          display: "inline-block",
+                          border: "1px solid rgba(0,0,0,0.08)",
+                        }}
+                      />
+                      <span>{category}</span>
+                      <X className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                      <span className="sr-only">Remove {category}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {categoryOpen ? (
+              <div
+                id="sidebar-category-section"
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  border: "1px solid rgba(0,0,0,0.06)",
+                  borderRadius: 12,
+                  padding: 12,
+                  background: "rgba(255,255,255,0.72)",
+                }}
+              >
+                {selectedCategories.length > 0 ? (
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => setSelectedCategories([])}
+                      title="Clear all selected categories"
+                    >
+                      Clear all
+                    </Button>
+                  </div>
+                ) : null}
+
+                {categoryOptions.length === 0 ? (
+                  <div
+                    style={{
+                      border: "1px dashed var(--border)",
+                      borderRadius: 12,
+                      padding: 12,
+                      fontSize: 12,
+                      color: "var(--muted-text)",
+                      background: "var(--surface)",
+                    }}
+                  >
+                    No categories are available in the current results.
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                    }}
+                  >
+                    {categoryOptions.map((category) =>
+                      renderCategoryButton(category.label, category.count)
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
 
         </aside>
 
@@ -1358,7 +2232,7 @@ export default function DashboardPage() {
               resizeState.current.startWidth = sidebarWidth;
             }}
             style={{
-              height: "calc(100vh - 210px)",
+              height: desktopPanelHeight,
               borderRadius: 999,
               cursor: "col-resize",
               display: "grid",
@@ -1388,7 +2262,7 @@ export default function DashboardPage() {
             overflow: "hidden",
             height: isMobile 
               ? "calc(100dvh - 280px)" 
-              : "calc(100vh - 210px)",
+              : desktopPanelHeight,
             minHeight: isMobile ? 400 : undefined,
             position: "relative",
             background: "var(--surface)",
@@ -1420,6 +2294,7 @@ export default function DashboardPage() {
                 onLoad={() => {
                   setMapError(null);
                   try {
+                    setCurrentZoom(mapRef.current?.getZoom() || 9.5);
                     const b = mapRef.current?.getBounds();
                     if (!b) return;
                     setMapBounds({
@@ -1438,6 +2313,7 @@ export default function DashboardPage() {
                 }}
                 onMoveEnd={() => {
                   try {
+                    setCurrentZoom(mapRef.current?.getZoom() || 9.5);
                     const b = mapRef.current?.getBounds();
                     if (!b) return;
                     setMapBounds({
@@ -1450,6 +2326,7 @@ export default function DashboardPage() {
                 }}
                 onZoomEnd={() => {
                   try {
+                    setCurrentZoom(mapRef.current?.getZoom() || 9.5);
                     const b = mapRef.current?.getBounds();
                     if (!b) return;
                     setMapBounds({
@@ -1462,7 +2339,7 @@ export default function DashboardPage() {
                 }}
                 mapStyle="mapbox://styles/mapbox/light-v11"
                 style={{ width: "100%", height: "100%", touchAction: "pan-x pan-y pinch-zoom" }}
-                interactiveLayerIds={["clusters", "unclustered-point"]}
+                interactiveLayerIds={["clusters", "unclustered-hit-area", "unclustered-point"]}
                 onClick={(e) => {
                   const f = e.features?.[0];
                   if (!f) return;
@@ -1663,15 +2540,15 @@ export default function DashboardPage() {
                 >
                   <Layer {...clusterLayer} />
                   <Layer {...clusterCountLayer} />
+                  <Layer {...unclusteredHitAreaLayer} />
                   <Layer {...unclusteredPointLayer} />
                 </Source>
 
                 {activePlace &&
-                safeNum(activePlace.lat) !== null &&
-                safeNum(activePlace.lng) !== null ? (
+                activePopupCoordinates ? (
                   <Popup
-                    longitude={safeNum(activePlace.lng) as number}
-                    latitude={safeNum(activePlace.lat) as number}
+                    longitude={activePopupCoordinates.lng}
+                    latitude={activePopupCoordinates.lat}
                     anchor="top"
                     onClose={() => setActivePlaceId(null)}
                     closeButton
@@ -1679,7 +2556,7 @@ export default function DashboardPage() {
                     maxWidth={isMobile ? "calc(100vw - 32px)" : "340px"}
                     className="arrival-popup"
                   >
-                    <div style={{ display: "grid", gap: 8 }}>
+                    <div style={{ display: "grid", gap: 10 }}>
                       {getPhotoSrc(activePlace.photo_ref, activePlace.place_id) ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -1694,66 +2571,42 @@ export default function DashboardPage() {
                             height: 140,
                             objectFit: "cover",
                             borderRadius: 10,
+                            border: "1px solid rgba(0,0,0,0.06)",
                           }}
                         />
                       ) : null}
 
-                      <div style={{ fontWeight: 800, fontSize: 14 }}>
-                        {activePlace.office || activePlace.organization || "(No name)"}
+                      <div style={{ display: "grid", gap: 4 }}>
+                        <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>
+                          {activePlace.office || activePlace.organization || "(No name)"}
+                        </div>
+                        {activePlace.organization &&
+                        activePlace.organization !== (activePlace.office || activePlace.organization) ? (
+                          <div style={{ fontSize: 12.5, color: "var(--muted-text)", lineHeight: 1.4 }}>
+                            {activePlace.organization}
+                          </div>
+                        ) : null}
+                        {activePlace.address ? (
+                          <div style={{ fontSize: 12.5, color: "var(--muted-text)", lineHeight: 1.45 }}>
+                            {activePlace.address}
+                          </div>
+                        ) : null}
                       </div>
-                      <div style={{ fontSize: 12, opacity: 0.8 }}>{activePlace.organization}</div>
-                      <div style={{ fontSize: 12, opacity: 0.7 }}>{activePlace.address}</div>
 
                       <div
                         style={{
-                          display: "flex",
-                          gap: 12,
-                          flexWrap: "wrap",
-                          marginTop: 4,
-                          alignItems: "center",
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gap: 8,
+                          marginTop: 2,
                         }}
                       >
-                        {activePlace.phone ? (
-                          <a
-                            href={`tel:${activePlace.phone}`}
-                            title="Call"
-                            className="text-xs underline underline-offset-4 text-foreground/80 hover:text-primary"
-                          >
-                            📞 {activePlace.phone}
-                          </a>
-                        ) : null}
-
-                        {activePlace.email ? (
-                          <a
-                            href={`mailto:${activePlace.email}`}
-                            title={activePlace.email}
-                            className="text-xs underline underline-offset-4 text-foreground/80 hover:text-primary"
-                          >
-                            Email
-                          </a>
-                        ) : null}
-
-                        {safeUrl(activePlace.website) ? (
-                          <a
-                            href={safeUrl(activePlace.website) as string}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs underline underline-offset-4 text-foreground/80 hover:text-primary"
-                          >
-                            Website
-                          </a>
-                        ) : null}
-
-                        {safeUrl(activePlace.maps_url) ? (
-                          <a
-                            href={safeUrl(activePlace.maps_url) as string}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs underline underline-offset-4 text-foreground/80 hover:text-primary"
-                          >
-                            Google Maps
-                          </a>
-                        ) : null}
+                        {[
+                          renderPopupAction(activePlace, "website"),
+                          renderPopupAction(activePlace, "directions"),
+                          renderPopupAction(activePlace, "phone"),
+                          renderPopupAction(activePlace, "email"),
+                        ].filter(Boolean)}
                       </div>
 
                       {activePlace.service_tags?.length ? (
@@ -1762,17 +2615,19 @@ export default function DashboardPage() {
                             display: "flex",
                             flexWrap: "wrap",
                             gap: 6,
-                            marginTop: 6,
+                            marginTop: 2,
                           }}
                         >
                           {activePlace.service_tags.map((t) => (
                             <span
                               key={t}
                               style={{
-                                fontSize: 12,
-                                border: "1px solid #ddd",
+                                fontSize: 11.5,
+                                border: "1px solid rgba(0,0,0,0.1)",
                                 borderRadius: 999,
                                 padding: "2px 8px",
+                                background: "rgba(255,255,255,0.7)",
+                                color: "rgba(17,24,39,0.82)",
                               }}
                               title={tagMeta.get(t)?.description || ""}
                             >
@@ -2019,75 +2874,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Mobile: Counts by Category below the map */}
-        {isMobile && (
-          <div
-            style={{
-              gridColumn: "1 / -1",
-              gridRow: 3,
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              padding: 12,
-              background: "var(--surface-2)",
-              boxShadow: "var(--shadow-sm)",
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>Counts by Category</div>
-            {countsByCategory.length === 0 ? (
-              <div style={{ fontSize: 12, opacity: 0.7 }}>No places in view.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 8 }}>
-                {(() => {
-                  const max = Math.max(...countsByCategory.map(([, n]) => n));
-                  return countsByCategory.map(([cat, n]) => {
-                    const pct = max > 0 ? (n / max) * 100 : 0;
-                    return (
-                      <div key={cat} style={{ display: "grid", gap: 4 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12 }}>
-                          <span style={{ flex: "1 1 0%", minWidth: 0, wordBreak: "break-word", opacity: 0.85 }}>{cat}</span>
-                          <span style={{ fontWeight: 800, flexShrink: 0 }}>{n}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span
-                            style={{
-                              width: 18,
-                              textAlign: "center",
-                              fontSize: 14,
-                              lineHeight: "14px",
-                              opacity: 0.9,
-                            }}
-                            title={cat}
-                            aria-label={cat}
-                          >
-                            {categoryIcon(cat)}
-                          </span>
-                          <div
-                            style={{
-                              flex: 1,
-                              height: 8,
-                              background: "#f3f4f6",
-                              borderRadius: 999,
-                              overflow: "hidden",
-                              border: "1px solid #eee",
-                            }}
-                          >
-                            <div
-                              style={{
-                                height: "100%",
-                                width: `${pct}%`,
-                                background: categoryColor(cat),
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            )}
-          </div>
-        )}
       </section>
 
       {/* Map popup close button style */}
@@ -2115,6 +2901,31 @@ export default function DashboardPage() {
 
         .arrival-popup .mapboxgl-popup-content a:hover {
           color: var(--accent-strong);
+        }
+
+        .arrival-popup .arrival-popup-action {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 36px;
+          padding: 8px 10px;
+          border-radius: 10px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          background: rgba(255, 255, 255, 0.9);
+          color: var(--foreground);
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 1.2;
+          text-decoration: none;
+          transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .arrival-popup .arrival-popup-action:hover {
+          background: var(--primary-soft-10);
+          border-color: rgba(146, 64, 14, 0.18);
+          color: var(--accent-strong);
+          text-decoration: none;
         }
 
         .arrival-popup .mapboxgl-popup-close-button {

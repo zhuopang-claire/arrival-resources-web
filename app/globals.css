@@ -102,19 +102,25 @@ a:hover {
   max-width: 1400px;
   min-width: 0;
   margin: 0 auto;
-  padding: 14px 8px;
+  padding: 18px 12px;
   display: grid;
   gap: 2px;
 }
 
 .app-title {
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  line-height: 1.15;
+  color: var(--text);
 }
 
 .app-subtitle {
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
+  line-height: 1.35;
   color: var(--muted-text);
+  max-width: 42rem;
 }
 
 .app-main {

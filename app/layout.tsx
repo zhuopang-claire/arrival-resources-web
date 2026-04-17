@@ -19,7 +19,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Arrival Resources",
-  description: "Find welcoming services in Greater Boston",
+  description:
+    "Finding welcoming services and community resources in Greater Boston.",
 };
 
 export default function RootLayout({
