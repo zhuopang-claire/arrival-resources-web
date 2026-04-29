@@ -1,0 +1,47 @@
+# Feedback: Arrival Resources Web App
+
+**Organization:** GDRC  
+**Format:** Meeting feedback  
+**Date:** 2026-04-09  
+
+## Overall Response
+
+The meeting participants generally saw the web app as a useful tool with the potential to benefit many people. The main discussion point centered on who the intended users are and, more specifically, the likely user scenario: where, how, and through whom the tool would actually be used in practice.
+
+## Key Questions Raised
+
+### 1. Who are the intended users?
+
+Participants asked whether the app is mainly intended for newcomers to use independently, or whether it is more realistically a tool for mediated use through social workers, community organizations, volunteers, or other intermediaries who help people navigate resources.
+
+This question matters because it affects the design priorities of the app. If newcomers are expected to use it directly, then language access, ease of navigation, and mobile usability become even more important. If the tool is mainly for service providers, then different functions may need to be emphasized.
+
+## Main Feedback from Participants
+
+1. **Clarify the primary user group and usage scenario**  
+   A key issue is whether the app is being designed mainly for newcomers themselves, or for staff and volunteers who help connect newcomers to services. Related to this is the question of where and how the tool is expected to be used: independently by newcomers on their own phones, or in a physical setting where use is mediated by social workers, community organizations, libraries, or other trusted intermediaries. This affects many other design decisions.
+
+2. **Think about how the physical and virtual environments work together**  
+   Participants also raised the importance of considering a physical form of the resource in addition to the web tool. They suggested that printed materials such as leaflets, tailored to a specific place or organization, could help people access information in trusted physical environments such as community organizations or libraries. These physical materials could also include QR codes linking to the broader website and database.
+
+## My Own Reflections Following the Discussion
+
+1. **Language accessibility**  
+   Since the current site is only in English, direct use by newcomers would likely require stronger multilingual support if they are expected to use it independently.
+
+2. **Potential for a conversational / chatbot interface**  
+   If direct user access is a goal, a chatbot or natural-language interface might help reduce reliance on map navigation and filtering by allowing users to ask for information in a more intuitive way.
+
+3. **Mobile usability**  
+   If many users are expected to access the site on their phones, the current interface may still be too difficult to use comfortably on a small screen, even if it is technically responsive.
+
+## Reflections / Implications
+
+The discussion highlighted that the usefulness of the app is not only a matter of information availability, but also of trust, access, and the real contexts in which people seek help. The main participant feedback pointed toward the importance of clarifying the user scenario and thinking about how physical and virtual forms of the resource might work together, while my own reflections following the meeting focused on what that would imply for language access, interface design, and mobile use. Together, these suggest that the project may need to be understood not just as a standalone website, but as part of a broader resource ecology that includes organizations, physical spaces, printed materials, and interpersonal support.
+
+## Key Takeaways
+
+- The app was seen as promising and broadly useful.
+- The central feedback from participants was the need to clarify the primary user group and the real-world usage scenario, including how physical and virtual forms of the resource might work together.
+- Questions about multilingual access, chatbot interaction, and mobile usability emerged as my own design reflections based on that broader issue.
+- A hybrid model linking physical materials and digital resources may improve accessibility, trust, and legitimacy.

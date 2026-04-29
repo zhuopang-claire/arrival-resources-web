@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import MapGL, { Layer, Popup, Source, type MapRef } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
   MapPinned,
   Phone,
   Mail,
+  ExternalLink,
 } from "lucide-react";
 import { useIsMobile } from "@/lib/useIsMobile";
 import {
@@ -70,6 +72,7 @@ type AdditionalResourceGroup = {
 };
 
 const PLACEHOLDER_IMAGE = "/placeholder-image.jpg";
+const FLYER_URL = "/Arrival%20Resources%20Web%20App%20Flyer.png";
 const SERVICE_TAG_GROUPS: TagGroupDef[] = [
   {
     id: "daily-needs",
@@ -2341,6 +2344,27 @@ export default function DashboardPage() {
             width: "100%",
           }}
         >
+          <Link
+  href={FLYER_URL}
+  target="_blank"
+  rel="noreferrer"
+  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+  style={{
+    position: "absolute",
+    right: 6,
+    bottom: -34,
+    zIndex: 5,
+    background: "rgba(255, 255, 255, 0.88)",
+    borderRadius: 999,
+    padding: "2px 4px",
+  }}
+>
+  Download printable flyer
+  <ExternalLink className="h-4 w-4" aria-hidden />
+</Link>
+
+<Dialog></Dialog>
+          
           <Dialog>
             <DialogTrigger asChild>
               <button
@@ -3033,6 +3057,7 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+          
           </div>
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Users, Lightbulb, Globe, Search, Languages, MessageCircle, GraduationCap, FolderTree, StepForward } from "lucide-react";
 
@@ -33,6 +34,8 @@ function categoryColor(category: string): string {
 
   return "#111827";
 }
+
+const FLYER_URL = "/Arrival Resources Web App Flyer.png";
 
 export default function AboutPage() {
   const [places, setPlaces] = useState<Place[]>([]);
@@ -91,6 +94,18 @@ export default function AboutPage() {
         <h1 className="text-4xl font-bold tracking-tight text-foreground">
           About This Tool
         </h1>
+        <p className="mx-auto max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Want to share this tool with others?{" "}
+          <Link
+            href={FLYER_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+          >
+            View or download the printable flyer
+          </Link>
+          .
+        </p>
       </div>
 
       <Card>
