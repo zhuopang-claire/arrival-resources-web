@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   X,
-  Menu,
   ChevronDown,
   ChevronUp,
   ChevronLeft,
@@ -21,6 +20,7 @@ import {
   Phone,
   Mail,
   ExternalLink,
+  Search,
 } from "lucide-react";
 import { useIsMobile } from "@/lib/useIsMobile";
 import {
@@ -1520,7 +1520,7 @@ export default function DashboardPage() {
         icon: Globe,
       },
       directions: {
-        href: safeUrl(place.directions_url),
+        href: safeUrl(place.directions_url) || safeUrl(place.maps_url),
         label: "Directions",
         icon: MapPinned,
       },
@@ -1551,6 +1551,92 @@ export default function DashboardPage() {
         <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
         <span>{config.label}</span>
       </a>
+    );
+  }
+
+  function renderSelectedPlaceDetails(place: Place, variant: "popup" | "sheet") {
+    return (
+      <div style={{ display: "grid", gap: variant === "sheet" ? 12 : 10 }}>
+        {getPhotoSrc(place.photo_ref, place.place_id) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={getPhotoSrc(place.photo_ref, place.place_id) as string}
+            alt="Place photo"
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = PLACEHOLDER_IMAGE;
+            }}
+            style={{
+              width: "100%",
+              height: variant === "sheet" ? 132 : 140,
+              objectFit: "cover",
+              borderRadius: 10,
+              border: "1px solid rgba(0,0,0,0.06)",
+            }}
+          />
+        ) : null}
+
+        <div style={{ display: "grid", gap: 4 }}>
+          <div style={{ fontWeight: 800, fontSize: variant === "sheet" ? 18 : 16, lineHeight: 1.25 }}>
+            {place.office || place.organization || "(No name)"}
+          </div>
+          {place.organization &&
+          place.organization !== (place.office || place.organization) ? (
+            <div style={{ fontSize: 12.5, color: "var(--muted-text)", lineHeight: 1.4 }}>
+              {place.organization}
+            </div>
+          ) : null}
+          {place.address ? (
+            <div style={{ fontSize: 12.5, color: "var(--muted-text)", lineHeight: 1.45 }}>
+              {place.address}
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gap: 8,
+            marginTop: 2,
+          }}
+        >
+          {[
+            renderPopupAction(place, "website"),
+            renderPopupAction(place, "directions"),
+            renderPopupAction(place, "phone"),
+            renderPopupAction(place, "email"),
+          ].filter(Boolean)}
+        </div>
+
+        {place.service_tags?.length ? (
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+              marginTop: 2,
+            }}
+          >
+            {place.service_tags.map((t) => (
+              <span
+                key={t}
+                style={{
+                  fontSize: 11.5,
+                  border: "1px solid rgba(0,0,0,0.1)",
+                  borderRadius: 999,
+                  padding: "2px 8px",
+                  background: "rgba(255,255,255,0.7)",
+                  color: "rgba(17,24,39,0.82)",
+                }}
+                title={tagMeta.get(t)?.description || ""}
+              >
+                {tagLabel.get(t) ?? t}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
     );
   }
 
@@ -1605,22 +1691,17 @@ export default function DashboardPage() {
       marginRight: "-8px"
     }}>
       <main style={{ display: "grid", gap: 16, width: "100%" }}>
-      <header style={{ display: "grid", gap: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          {isMobile && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="rounded-full"
-              aria-label="Toggle sidebar"
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+      <header style={{ display: "grid", gap: isMobile ? 10 : 8 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr auto" : "auto auto",
+            justifyContent: isMobile ? "stretch" : "start",
+            gap: isMobile ? 10 : 12,
+            alignItems: "center",
+            width: "100%",
+          }}
+        >
           <p style={{ opacity: 0.8, margin: 0, fontSize: isMobile ? 13 : 14 }}>
           {loading
   ? "Loading…"
@@ -1681,7 +1762,7 @@ export default function DashboardPage() {
         gridTemplateRows: isMobile ? "auto 1fr auto" : "auto",
         alignItems: "start",
       }}>
-        {/* Mobile: when sidebar closed, show Filters chip to open it */}
+        {/* Mobile: when sidebar closed, show search/filter chip to open it */}
         {isMobile && !sidebarOpen ? (
           <div style={{ gridColumn: "1 / -1", gridRow: 1, display: "flex", alignItems: "center" }}>
             <Button
@@ -1689,10 +1770,11 @@ export default function DashboardPage() {
               variant="outline"
               size="sm"
               onClick={() => setSidebarOpen(true)}
-              className="rounded-full"
-              aria-label="Open filters"
+              className="rounded-full gap-2"
+              aria-label="Open search and filters"
             >
-              Filters
+              <Search className="h-4 w-4" aria-hidden />
+              Search &amp; filters
             </Button>
           </div>
         ) : null}
@@ -1720,6 +1802,40 @@ export default function DashboardPage() {
             opacity: isMobile && !sidebarOpen ? 0 : 1,
           }}
         >
+          {isMobile ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontWeight: 800,
+                  color: "var(--text)",
+                }}
+              >
+                <Search className="h-4 w-4" aria-hidden />
+                <span>Search &amp; filters</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSidebarOpen(false)}
+                className="h-9 w-9 rounded-full p-0"
+                aria-label="Close search and filters"
+                title="Close search and filters"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </Button>
+            </div>
+          ) : null}
           {/* Unified search (name, ZIP, or address) + Near me */}
           <div ref={searchWrapRef} style={{ display: "grid", gap: 8 }}>
             <div style={{ position: "relative", width: "100%" }}>
@@ -2345,38 +2461,39 @@ export default function DashboardPage() {
           }}
         >
           <Link
-  href={FLYER_URL}
-  target="_blank"
-  rel="noreferrer"
-  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
-  style={{
-    position: "absolute",
-    right: 6,
-    bottom: -34,
-    zIndex: 5,
-    background: "rgba(255, 255, 255, 0.88)",
-    borderRadius: 999,
-    padding: "2px 4px",
-  }}
->
-  Download printable flyer
-  <ExternalLink className="h-4 w-4" aria-hidden />
-</Link>
-
-<Dialog></Dialog>
+            href={FLYER_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+            style={{
+              position: "absolute",
+              right: 6,
+              bottom: -34,
+              zIndex: 5,
+              background: "rgba(255, 255, 255, 0.88)",
+              borderRadius: 999,
+              padding: "2px 4px",
+            }}
+          >
+            Download printable flyer
+            <ExternalLink className="h-4 w-4" aria-hidden />
+          </Link>
           
           <Dialog>
             <DialogTrigger asChild>
               <button
                 type="button"
                 style={{
-                  position: "absolute",
-                  top: isMobile ? -42 : -46,
+                  position: isMobile ? "relative" : "absolute",
+                  top: isMobile ? undefined : -46,
                   right: 0,
                   zIndex: 4,
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 8,
+                  justifyContent: "center",
+                  width: isMobile ? "100%" : undefined,
+                  marginBottom: isMobile ? 10 : undefined,
                   padding: isMobile ? "8px 10px" : "9px 12px",
                   borderRadius: 999,
                   border: "1px solid rgba(0,0,0,0.08)",
@@ -2393,7 +2510,7 @@ export default function DashboardPage() {
                 <span>Can&apos;t find what you need?</span>
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-h-[82dvh] w-[calc(100vw-24px)] overflow-hidden p-4 sm:max-w-2xl sm:p-6">
               <DialogHeader className="pb-2">
                 <DialogTitle>Additional Resources</DialogTitle>
                 <DialogDescription>
@@ -2404,7 +2521,7 @@ export default function DashboardPage() {
                 style={{
                   display: "grid",
                   gap: 10,
-                  maxHeight: "70vh",
+                  maxHeight: isMobile ? "62dvh" : "70vh",
                   overflowY: "auto",
                   paddingRight: 2,
                 }}
@@ -2468,9 +2585,9 @@ export default function DashboardPage() {
               borderRadius: 12,
               overflow: "hidden",
               height: isMobile 
-                ? "calc(100dvh - 280px)" 
+                ? "calc(100dvh - 250px)" 
                 : desktopPanelHeight,
-              minHeight: isMobile ? 400 : undefined,
+              minHeight: isMobile ? 460 : undefined,
               position: "relative",
               background: "var(--surface)",
               boxShadow: "var(--shadow-sm)",
@@ -2584,15 +2701,15 @@ export default function DashboardPage() {
                       position: "absolute",
                       top: isMobile ? 8 : 12,
                       right: isMobile ? 8 : 12,
-                      left: isMobile ? 8 : undefined,
-                      bottom: isMobile ? 8 : undefined,
+                      left: undefined,
+                      bottom: undefined,
                       zIndex: 2,
                       background: "rgba(255,255,255,0.92)",
                       border: "1px solid var(--border)",
                       borderRadius: 12,
                       padding: isMobile ? 8 : 10,
-                      width: isMobile ? "calc(100% - 16px)" : 220,
-                      maxWidth: isMobile ? 280 : 220,
+                      width: isMobile ? 220 : 220,
+                      maxWidth: isMobile ? "calc(100% - 16px)" : 220,
                     }}
                   >
                     <button
@@ -2724,7 +2841,7 @@ export default function DashboardPage() {
                     <div style={{ fontWeight: 800, marginBottom: 4 }}>Map error</div>
                     <div style={{ opacity: 0.95 }}>{mapError}</div>
                     <div style={{ marginTop: 6, opacity: 0.8 }}>
-                      Tip: open DevTools → Network, filter "mapbox", and check for 401/403 on style/tiles.
+                      Tip: open DevTools → Network, filter &quot;mapbox&quot;, and check for 401/403 on style/tiles.
                     </div>
                   </div>
                 ) : null}
@@ -2749,7 +2866,8 @@ export default function DashboardPage() {
                   <Layer {...unclusteredPointLayer} />
                 </Source>
 
-                {activePlace &&
+                {!isMobile &&
+                activePlace &&
                 activePopupCoordinates ? (
                   <Popup
                     longitude={activePopupCoordinates.lng}
@@ -2761,88 +2879,34 @@ export default function DashboardPage() {
                     maxWidth={isMobile ? "calc(100vw - 32px)" : "340px"}
                     className="arrival-popup"
                   >
-                    <div style={{ display: "grid", gap: 10 }}>
-                      {getPhotoSrc(activePlace.photo_ref, activePlace.place_id) ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={getPhotoSrc(activePlace.photo_ref, activePlace.place_id) as string}
-                          alt="Place photo"
-                          onError={(event) => {
-                            event.currentTarget.onerror = null;
-                            event.currentTarget.src = PLACEHOLDER_IMAGE;
-                          }}
-                          style={{
-                            width: "100%",
-                            height: 140,
-                            objectFit: "cover",
-                            borderRadius: 10,
-                            border: "1px solid rgba(0,0,0,0.06)",
-                          }}
-                        />
-                      ) : null}
-
-                      <div style={{ display: "grid", gap: 4 }}>
-                        <div style={{ fontWeight: 800, fontSize: 16, lineHeight: 1.3 }}>
-                          {activePlace.office || activePlace.organization || "(No name)"}
-                        </div>
-                        {activePlace.organization &&
-                        activePlace.organization !== (activePlace.office || activePlace.organization) ? (
-                          <div style={{ fontSize: 12.5, color: "var(--muted-text)", lineHeight: 1.4 }}>
-                            {activePlace.organization}
-                          </div>
-                        ) : null}
-                        {activePlace.address ? (
-                          <div style={{ fontSize: 12.5, color: "var(--muted-text)", lineHeight: 1.45 }}>
-                            {activePlace.address}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                          gap: 8,
-                          marginTop: 2,
-                        }}
-                      >
-                        {[
-                          renderPopupAction(activePlace, "website"),
-                          renderPopupAction(activePlace, "directions"),
-                          renderPopupAction(activePlace, "phone"),
-                          renderPopupAction(activePlace, "email"),
-                        ].filter(Boolean)}
-                      </div>
-
-                      {activePlace.service_tags?.length ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 6,
-                            marginTop: 2,
-                          }}
-                        >
-                          {activePlace.service_tags.map((t) => (
-                            <span
-                              key={t}
-                              style={{
-                                fontSize: 11.5,
-                                border: "1px solid rgba(0,0,0,0.1)",
-                                borderRadius: 999,
-                                padding: "2px 8px",
-                                background: "rgba(255,255,255,0.7)",
-                                color: "rgba(17,24,39,0.82)",
-                              }}
-                              title={tagMeta.get(t)?.description || ""}
-                            >
-                              {tagLabel.get(t) ?? t}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
+                    {renderSelectedPlaceDetails(activePlace, "popup")}
                   </Popup>
+                ) : null}
+                {isMobile && activePlace ? (
+                  <div
+                    className="arrival-mobile-sheet"
+                    role="dialog"
+                    aria-modal="false"
+                    aria-label="Selected resource details"
+                  >
+                    <div className="arrival-mobile-sheet-handle" aria-hidden />
+                    <div className="arrival-mobile-sheet-header">
+                      <div className="arrival-mobile-sheet-title">
+                        {activePlace.office || activePlace.organization || "Resource"}
+                      </div>
+                      <button
+                        type="button"
+                        className="arrival-mobile-sheet-close"
+                        onClick={() => setActivePlaceId(null)}
+                        aria-label="Close resource details"
+                      >
+                        <X className="h-5 w-5" aria-hidden />
+                      </button>
+                    </div>
+                    <div className="arrival-mobile-sheet-body">
+                      {renderSelectedPlaceDetails(activePlace, "sheet")}
+                    </div>
+                  </div>
                 ) : null}
               </MapGL>
             )
@@ -3138,6 +3202,77 @@ export default function DashboardPage() {
           border-color: rgba(146, 64, 14, 0.18);
           color: var(--accent-strong);
           text-decoration: none;
+        }
+
+        .arrival-mobile-sheet {
+          position: absolute;
+          left: 8px;
+          right: 8px;
+          bottom: 8px;
+          z-index: 5;
+          max-height: min(68dvh, 560px);
+          display: grid;
+          grid-template-rows: auto auto minmax(0, 1fr);
+          border: 1px solid var(--border);
+          border-radius: 16px 16px 12px 12px;
+          background: color-mix(in oklab, var(--surface) 96%, transparent);
+          box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+          overflow: hidden;
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .arrival-mobile-sheet-handle {
+          justify-self: center;
+          width: 42px;
+          height: 4px;
+          margin-top: 8px;
+          border-radius: 999px;
+          background: rgba(36, 48, 36, 0.22);
+        }
+
+        .arrival-mobile-sheet-header {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 44px;
+          align-items: center;
+          gap: 10px;
+          min-height: 58px;
+          padding: 8px 10px 8px 14px;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .arrival-mobile-sheet-title {
+          min-width: 0;
+          color: var(--text);
+          font-size: 15px;
+          font-weight: 800;
+          line-height: 1.25;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .arrival-mobile-sheet-close {
+          width: 44px;
+          height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+          border: 1px solid var(--primary-border-35);
+          background: var(--surface);
+          color: var(--foreground);
+          box-shadow: var(--shadow-sm);
+        }
+
+        .arrival-mobile-sheet-close:hover {
+          background: var(--primary-soft-10);
+        }
+
+        .arrival-mobile-sheet-body {
+          min-height: 0;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
+          padding: 12px 12px 14px;
         }
 
         .arrival-popup .mapboxgl-popup-close-button {

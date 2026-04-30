@@ -107,9 +107,26 @@ a:hover {
   gap: 2px;
 }
 
+@media (max-width: 768px) {
+  .app-brand {
+    padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  }
+
+  .app-title {
+    font-size: 1.25rem;
+    line-height: 1.1;
+  }
+
+  .app-subtitle {
+    font-size: 0.9rem;
+    line-height: 1.35;
+    max-width: 22rem;
+  }
+}
+
 .app-title {
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   font-size: clamp(1.35rem, 2.4vw, 1.85rem);
   line-height: 1.15;
   color: var(--text);
